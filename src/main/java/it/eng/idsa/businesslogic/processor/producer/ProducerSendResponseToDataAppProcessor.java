@@ -76,11 +76,10 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 		String contentType = multipartMessage.getHttpHeaders().getOrDefault("Content-Type", "multipart/mixed");
 		headesParts.put("Content-Type", contentType);
 		
-		if(!isEnabledClearingHouse) {
-			// clear from Headers multipartMessageBody (it is not unusable for the Open Data App)
-			Map<String, Object> headers = exchange.getIn().getHeaders();
-			headers.remove("multipartMessageBody");
-		}
+		// clear from Headers multipartMessageBody (it is not unusable for the Open Data App)
+		Map<String, Object> headers = exchange.getIn().getHeaders();
+        if(null != headers.get("multipartMessageBody"))
+            headers.remove("multipartMessageBody");
 
 		// TODO: Send The MultipartMessage message to the WebSocket
 		if(isEnabledWebSocket) {

@@ -46,7 +46,7 @@ public class ProducerSendTransactionToCHProcessor implements Processor {
 
 		// clear from Headers multipartMessageBody (it is not unusable for the Open Data App)
 		Map<String, Object> headers = exchange.getIn().getHeaders();
-		headers.remove("multipartMessageBody");
+		//headers.remove("multipartMessageBody");
 		
 		exchange.getOut().setHeaders(headers);
 		exchange.getOut().setBody(exchange.getIn().getBody());
