@@ -129,7 +129,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 					.endChoice();
 		} else if (isEnabledIdscp || isEnabledWebSocket) {
 			// End point B. ECC communication (Web Socket or IDSCP)
-			from("timer://timerEndpointB?fixedRate=true&period=10s") //EndPoint B
+			from("timer://timerEndpointB?repeatCount=-1") //EndPoint B
 					.process(fileRecreatorProcessor)
 					.process(multiPartMessageProcessor)
 					.choice()

@@ -133,7 +133,7 @@ public class CamelRouteProducer extends RouteBuilder {
                     .endChoice();
             } else {
 				// End point A. Coomunication between Data App and ECC Producer.
-				from("timer://timerEndpointA?fixedRate=true&period=10s") //EndPoint A
+				from("timer://timerEndpointA?repeatCount=-1") //EndPoint A
 						.process(fileRecreatorProcessor)
 						.process(parseReceivedDataFromDAppProcessorBodyBinary)
 						.choice()
