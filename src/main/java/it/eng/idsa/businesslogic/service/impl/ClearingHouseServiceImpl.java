@@ -59,7 +59,7 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 	@Autowired
 	private HashFileService hashService;
 
-
+/*
 	@Override
 	public boolean registerTransaction(Message correlatedMessage, String payload) {
 		// TODO Auto-generated method stub
@@ -118,8 +118,9 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 		}
 		return false;
 	}
+	*/
 	private static String getInformationModelVersion() {
-		String currnetInformationModelVersion = null;
+	/*	String currnetInformationModelVersion = null;
 		try {
 	
 			InputStream is = RejectionMessageServiceImpl.class.getClassLoader().getResourceAsStream("META-INF/maven/it.eng.idsa/market4.0-execution_core_container_business_logic/pom.xml");
@@ -143,7 +144,8 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 		}catch(Exception e) {
 			e.printStackTrace();
 		}
-		return currnetInformationModelVersion;
+		return currnetInformationModelVersion;*/
+		return "1.0";
 	}
 	
 	private URI whoIAm() {

@@ -173,8 +173,10 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		return response;
 	}
 	
-	private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) {
+	private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) throws ClientProtocolException, IOException{
 		logger.info("Forwarding Message: Body: http-header");
+		
+		
 
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);

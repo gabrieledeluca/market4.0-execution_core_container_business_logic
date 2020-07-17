@@ -84,6 +84,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
 
         Map<String, Object> headesParts = exchange.getIn().getHeaders();
+        String mrk = (String) headesParts.get("issuerConnector");
+        System.out.println(mrk);
         Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
 
         String messageWithToken = null;
@@ -200,6 +202,11 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         		response = this.forwardMessageFormData(forwardTo, header, payload);
         		break;
         	}
+        	case "http-header":
+        	{
+    			response =  this.forwardMessageHttpHeader(forwardTo, messageWithToken, payload, headesParts);
+    			break;
+    		}
         	default:
         		logger.error("Applicaton property: application.eccHttpSendRouter is not properly set");
     			rejectionMessageService.sendRejectionMessage(
@@ -210,7 +217,48 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         return response;
     }
 
-    private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws UnsupportedEncodingException {
+    private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload, Map<String, Object> headersMap) {
+		logger.info("Forwarding Message: Body: http-header");
+
+		// Set F address
+		HttpPost httpPost = new HttpPost(address);
+
+StringBuilder sb = new StringBuilder();
+		
+String pera = (String) headersMap.get("issued");
+System.out.println(pera);
+		sb.append(headersMap.get("type").toString());
+		sb.append(headersMap.get("issued").toString());
+		sb.append(headersMap.get("issuerConnector").toString());
+		sb.append(headersMap.get("correlationMessage").toString());
+		sb.append(headersMap.get("transferContract").toString());
+		sb.append(headersMap.get("modelVersion").toString());
+		sb.append(headersMap.get("id").toString());
+		
+		header = sb.toString();
+		
+		System.out.println(header);
+		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
+		httpPost.setEntity(reqEntity);
+
+		CloseableHttpResponse response;
+
+		try {
+			response = getHttpClient().execute(httpPost);
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+
+		return response;
+	}
+
+	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws UnsupportedEncodingException {
         logger.info("Forwarding Message: Body: binary");
 
         // Covert to ContentBody

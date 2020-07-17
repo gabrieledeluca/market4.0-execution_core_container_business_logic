@@ -75,7 +75,7 @@ public class CamelRouteProducer extends RouteBuilder {
 
 		camelContext.getShutdownStrategy().setLogInflightExchangesOnTimeout(false);
 		camelContext.getShutdownStrategy().setTimeout(3);
-		//@formatter:off
+
 		onException(ExceptionForProcessor.class, RuntimeException.class)
 			.handled(true)
 			.process(processorException);
@@ -140,10 +140,39 @@ public class CamelRouteProducer extends RouteBuilder {
                                     .process(sendTransactionToCHProcessor)
                             .endChoice()
                     .endChoice();
+            
+         // Camel SSL - Endpoint: A - Http-header
+            from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageHttpHeader")
+                    .process(parseReceivedDataProcessorBodyFormData)
+                    .choice()
+                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
+                            .process(getTokenFromDapsProcessor)
+    //						.process(sendToActiveMQ)
+    //						.process(receiveFromActiveMQ)
+                            // Send data to Endpoint B
+                            .process(sendDataToBusinessLogicProcessor)
+                            .process(parseReceivedResponseMessage)
+                            .process(validateTokenProcessor)
+                            .process(sendResponseToDataAppProcessor)
+                            .choice()
+                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+                                    .process(sendTransactionToCHProcessor)
+                            .endChoice()
+                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
+        //					.process(sendToActiveMQ)
+        //					.process(receiveFromActiveMQ)
+                            // Send data to Endpoint B
+                            .process(sendDataToBusinessLogicProcessor)
+                            .process(parseReceivedResponseMessage)
+                            .process(sendResponseToDataAppProcessor)
+                            .choice()
+                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+                                    .process(sendTransactionToCHProcessor)
+                            .endChoice()
+                    .endChoice();
             } else {
-				// End point A. Communication between Data App and ECC Producer.
-				//fixedRate=true&period=10s
-				from("timer://timerEndpointA?repeatCount=-1") //EndPoint A
+				// End point A. Coomunication between Data App and ECC Producer.
+				from("timer://timerEndpointA?fixedRate=true&period=10s") //EndPoint A
 						.process(fileRecreatorProcessor)
 						.process(parseReceivedDataFromDAppProcessorBodyBinary)
 						.choice()
@@ -170,7 +199,6 @@ public class CamelRouteProducer extends RouteBuilder {
 									.process(sendTransactionToCHProcessor)
 								.endChoice()
 					.endChoice();
-			//@formatter:on
 		}
 	}
 
