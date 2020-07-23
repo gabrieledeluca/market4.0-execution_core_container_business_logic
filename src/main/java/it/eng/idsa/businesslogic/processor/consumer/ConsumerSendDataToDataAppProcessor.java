@@ -177,22 +177,9 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	private CloseableHttpResponse forwardMessageHttpHeader(String address, Map<String, Object> headersMap) throws ClientProtocolException, IOException{
 		logger.info("Forwarding Message: Body: http-header");
 		
-		StringBuffer sb = new StringBuffer();
-		
-		sb.append("{" + System.lineSeparator());
-		sb.append(appendKeyAndValue("@type", headersMap));
-		sb.append(appendKeyAndValue("issued", headersMap));
-		sb.append(appendKeyAndValue("issuerConnector", headersMap));
-		sb.append(appendKeyAndValue("correlationMessage", headersMap));
-		sb.append(appendKeyAndValue("transferContract", headersMap));
-		sb.append(appendKeyAndValue("modelVersion", headersMap));
-		sb.append(appendKeyAndValue("@id", headersMap));
-		sb.append("}");
-		
-		String header = sb.toString();
+		String header = getHeaderFromHeadersMap(headersMap);
 		
 		System.out.println(header);
-		
 		
 		String payload = headersMap.get("payload").toString();
 		
@@ -234,6 +221,23 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 		return response;
 	}
+
+	private String getHeaderFromHeadersMap(Map<String, Object> headersMap) {
+		StringBuffer sb = new StringBuffer();
+
+		sb.append("{" + System.lineSeparator());
+		sb.append(appendKeyAndValue("@type", headersMap));
+		sb.append(appendKeyAndValue("issued", headersMap));
+		sb.append(appendKeyAndValue("issuerConnector", headersMap));
+		sb.append(appendKeyAndValue("correlationMessage", headersMap));
+		sb.append(appendKeyAndValue("transferContract", headersMap));
+		sb.append(appendKeyAndValue("modelVersion", headersMap));
+		sb.append(appendKeyAndValue("@id", headersMap));
+		sb.append("}");
+
+		return sb.toString();
+	}
+
 
 	private String appendKeyAndValue(String key, Map<String, Object> headersMap) {
 		StringBuffer sb = new StringBuffer();
