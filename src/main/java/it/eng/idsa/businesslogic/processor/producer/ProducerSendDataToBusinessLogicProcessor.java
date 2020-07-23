@@ -84,8 +84,6 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
 
         Map<String, Object> headesParts = exchange.getIn().getHeaders();
-        String mrk = (String) headesParts.get("issuerConnector");
-        System.out.println(mrk);
         Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
 
         String messageWithToken = null;
@@ -167,7 +165,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     }
 
     private CloseableHttpResponse sendMultipartMessage(
-            Map<String, Object> headesParts,
+            Map<String, Object> headerParts,
             String messageWithToken,
             String header,
             String payload,
@@ -176,7 +174,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         CloseableHttpResponse response = null;
         Message message = multipartMessageService.getMessage(header);
         // -- Send message using HTTPS
-        if (Boolean.parseBoolean(headesParts.get("Is-Enabled-Daps-Interaction").toString())) {
+        if (Boolean.parseBoolean(headerParts.get("Is-Enabled-Daps-Interaction").toString())) {
         	switch(eccHttpSendRouter) {
         	case "mixed": {
         		response = this.forwardMessageBinary(forwardTo, messageWithToken, payload);
@@ -186,6 +184,11 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         		response = this.forwardMessageFormData(forwardTo, messageWithToken, payload);
         		break;
         	}
+        	case "http-header":
+        	{
+    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload);
+    			break;
+    		}
         	default:
         		logger.error("Applicaton property: application.eccHttpSendRouter is not properly set");
     			rejectionMessageService.sendRejectionMessage(
@@ -204,7 +207,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         	}
         	case "http-header":
         	{
-    			response =  this.forwardMessageHttpHeader(forwardTo, messageWithToken, payload, headesParts);
+    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload);
     			break;
     		}
         	default:
@@ -217,30 +220,36 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         return response;
     }
 
-    private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload, Map<String, Object> headersMap) {
+    private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) {
 		logger.info("Forwarding Message: Body: http-header");
 
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
-
-StringBuilder sb = new StringBuilder();
 		
-String pera = (String) headersMap.get("issued");
-System.out.println(pera);
-		sb.append(headersMap.get("type").toString());
-		sb.append(headersMap.get("issued").toString());
-		sb.append(headersMap.get("issuerConnector").toString());
-		sb.append(headersMap.get("correlationMessage").toString());
-		sb.append(headersMap.get("transferContract").toString());
-		sb.append(headersMap.get("modelVersion").toString());
-		sb.append(headersMap.get("id").toString());
+		// Set header and payload as http headers
 		
-		header = sb.toString();
 		
-		System.out.println(header);
-		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
-		httpPost.setEntity(reqEntity);
-
+		String type = returnHeaderValue(header, "type");
+		httpPost.addHeader("type", type);
+		String issued = returnHeaderValue(header, "issued");
+		httpPost.addHeader("issued", issued);
+		String issuerConnector = returnHeaderValue(header, "issuerConnector");
+		httpPost.addHeader("issuerConnector", issuerConnector);
+		String correlationMessage = returnHeaderValue(header, "correlationMessage");
+		httpPost.addHeader("correlationMessage", correlationMessage);
+		String transferContract = returnHeaderValue(header, "transferContract");
+		httpPost.addHeader("transferContract", transferContract);
+		String modelVersion = returnHeaderValue(header, "modelVersion");
+		httpPost.addHeader("modelVersion", modelVersion);
+		String id = returnHeaderValue(header, "id");
+		httpPost.addHeader("id", id);
+		// TO-DO for DAPS
+//		if(header.contains("token")) {
+//			httpPost.addHeader("token", token);
+//		}
+		
+		httpPost.addHeader("payload", payload);
+		
 		CloseableHttpResponse response;
 
 		try {
@@ -256,6 +265,15 @@ System.out.println(pera);
 		}
 
 		return response;
+	}
+
+	private String returnHeaderValue(String header, String key) {
+		int keyIndex = header.lastIndexOf(key);
+		String rowStart = header.substring(keyIndex + 5 + key.length()); // space between the key and the value is 5
+		String rowEnd = "\"";
+		int end = rowStart.indexOf(rowEnd);
+		String value = rowStart.substring(0, end);
+		return value;
 	}
 
 	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws UnsupportedEncodingException {

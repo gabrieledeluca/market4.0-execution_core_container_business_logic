@@ -60,6 +60,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	public void process(Exchange exchange) throws Exception {
 
 		Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
+		
 
 		// Get header, payload and message
 		String header = filterHeader(multipartMessageParts.get("header").toString());
@@ -84,7 +85,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		}
 		case "http-header":
 		{
-			response =  forwardMessageHttpHeader(configuration.getOpenDataAppReceiver(), header, payload);
+			response =  forwardMessageHttpHeader(configuration.getOpenDataAppReceiver(), exchange.getIn().getHeaders());
 			break;
 		}
 		default: {
@@ -173,16 +174,49 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		return response;
 	}
 	
-	private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) throws ClientProtocolException, IOException{
+	private CloseableHttpResponse forwardMessageHttpHeader(String address, Map<String, Object> headersMap) throws ClientProtocolException, IOException{
 		logger.info("Forwarding Message: Body: http-header");
 		
+		StringBuffer sb = new StringBuffer();
 		
+		sb.append("{" + System.lineSeparator());
+		sb.append(appendKeyAndValue("@type", headersMap));
+		sb.append(appendKeyAndValue("issued", headersMap));
+		sb.append(appendKeyAndValue("issuerConnector", headersMap));
+		sb.append(appendKeyAndValue("correlationMessage", headersMap));
+		sb.append(appendKeyAndValue("transferContract", headersMap));
+		sb.append(appendKeyAndValue("modelVersion", headersMap));
+		sb.append(appendKeyAndValue("@id", headersMap));
+		sb.append("}");
+		
+		String header = sb.toString();
+		
+		System.out.println(header);
+		
+		
+		String payload = headersMap.get("payload").toString();
+		
+		// Covert to ContentBody
+				ContentBody cbHeader = convertToContentBody(header, ContentType.APPLICATION_JSON, "header");
+				ContentBody cbPayload = null;
+				if(payload!=null) {
+					cbPayload = convertToContentBody(payload, ContentType.DEFAULT_TEXT, "payload");
+				}
 
-		// Set F address
-		HttpPost httpPost = new HttpPost(address);
+				// Set F address
+				HttpPost httpPost = new HttpPost(address);
 
-		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
-		httpPost.setEntity(reqEntity);
+				HttpEntity reqEntity = payload==null ?
+					MultipartEntityBuilder.create()
+						.addPart("header", cbHeader)
+						.build()	
+						:
+					MultipartEntityBuilder.create()
+						.addPart("header", cbHeader)
+						.addPart("payload", cbPayload)
+						.build();
+
+				httpPost.setEntity(reqEntity);
 
 		CloseableHttpResponse response;
 		
@@ -200,6 +234,26 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 		return response;
 	}
+
+	private String appendKeyAndValue(String key, Map<String, Object> headersMap) {
+		StringBuffer sb = new StringBuffer();
+		String quote = "\"";
+		String space = "\" : \"";
+		String value = headersMap.get(key).toString();
+		
+		sb.append(quote);
+		if (key.equals("type") || key.equals("id")) {
+			sb.append("@");
+		}
+		sb.append(key);
+		sb.append(space);
+		sb.append(value);
+		sb.append(quote);
+		sb.append(System.lineSeparator());
+		
+		return sb.toString();
+	}
+
 
 	private CloseableHttpClient getHttpClient() {
 		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
@@ -220,7 +274,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		ContentBody cbValue = new ByteArrayBody(valueBiteArray, contentType, valueName);
 		return cbValue;
 	}
-
+	
 	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String openApiDataAppAddress) throws UnsupportedOperationException, IOException {
 		if (response==null) {
 			logger.info("...communication error with: " + openApiDataAppAddress);
