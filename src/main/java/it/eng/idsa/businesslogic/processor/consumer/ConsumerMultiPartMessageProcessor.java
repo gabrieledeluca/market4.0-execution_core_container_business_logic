@@ -35,7 +35,9 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 
 	@Value("${application.isEnabledClearingHouse}")
 	private boolean isEnabledClearingHouse;
-
+	
+	@Value("${application.eccHttpSendRouter}")
+	private String eccHttpSendRouter;
 
 	@Autowired
 	private MultipartMessageService multipartMessageService;
@@ -51,6 +53,13 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		Message message=null;
 		Map<String, Object> headesParts = new HashMap<String, Object>();
 		Map<String, Object> multipartMessageParts = new HashMap<String, Object>();
+		
+		if (eccHttpSendRouter.equals("http-header")) {
+			header = getHeaderFromHeadersMap(exchange.getIn().getHeaders());
+			payload = exchange.getIn().getHeader("payload").toString();
+			System.out.println(header);
+			System.out.println(payload);
+		}
 		
 		if(!exchange.getIn().getHeaders().containsKey("header"))
 		{
@@ -98,6 +107,41 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 					RejectionMessageType.REJECTION_MESSAGE_COMMON, 
 					message);
 		}
+	}
+
+	private String getHeaderFromHeadersMap(Map<String, Object> headers) {
+		StringBuffer sb = new StringBuffer();
+
+		sb.append("{" + System.lineSeparator());
+		sb.append(appendKeyAndValue("type", headers));
+		sb.append(appendKeyAndValue("issued", headers));
+		sb.append(appendKeyAndValue("issuerConnector", headers));
+		sb.append(appendKeyAndValue("correlationMessage", headers));
+		sb.append(appendKeyAndValue("transferContract", headers));
+		sb.append(appendKeyAndValue("modelVersion", headers));
+		sb.append(appendKeyAndValue("id", headers));
+		sb.append("}");
+
+		return sb.toString();
+	}
+
+	private String appendKeyAndValue(String key, Map<String, Object> headersMap) {
+		StringBuffer sb = new StringBuffer();
+		String quote = "\"";
+		String space = "\" : \"";
+		String value = headersMap.get(key).toString();
+		
+		sb.append(quote);
+		if (key.equals("type") || key.equals("id")) {
+			sb.append("@");
+		}
+		sb.append(key);
+		sb.append(space);
+		sb.append(value);
+		sb.append(quote);
+		sb.append(System.lineSeparator());
+		
+		return sb.toString();
 	}
 	
 }

@@ -83,11 +83,6 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 			response =  forwardMessageFormData(configuration.getOpenDataAppReceiver(), header, payload);
 			break;
 		}
-		case "http-header":
-		{
-			response =  forwardMessageHttpHeader(configuration.getOpenDataAppReceiver(), exchange.getIn().getHeaders());
-			break;
-		}
 		default: {
 			logger.error("Applicaton property: application.openDataAppReceiverRouter is not properly set");
 			rejectionMessageService.sendRejectionMessage(
@@ -174,89 +169,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		return response;
 	}
 	
-	private CloseableHttpResponse forwardMessageHttpHeader(String address, Map<String, Object> headersMap) throws ClientProtocolException, IOException{
-		logger.info("Forwarding Message: Body: http-header");
-		
-		String header = getHeaderFromHeadersMap(headersMap);
-		
-		System.out.println(header);
-		
-		String payload = headersMap.get("payload").toString();
-		
-		// Covert to ContentBody
-				ContentBody cbHeader = convertToContentBody(header, ContentType.APPLICATION_JSON, "header");
-				ContentBody cbPayload = null;
-				if(payload!=null) {
-					cbPayload = convertToContentBody(payload, ContentType.DEFAULT_TEXT, "payload");
-				}
-
-				// Set F address
-				HttpPost httpPost = new HttpPost(address);
-
-				HttpEntity reqEntity = payload==null ?
-					MultipartEntityBuilder.create()
-						.addPart("header", cbHeader)
-						.build()	
-						:
-					MultipartEntityBuilder.create()
-						.addPart("header", cbHeader)
-						.addPart("payload", cbPayload)
-						.build();
-
-				httpPost.setEntity(reqEntity);
-
-		CloseableHttpResponse response;
-		
-		try {
-			response = getHttpClient().execute(httpPost);
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		}
-
-		return response;
-	}
-
-	private String getHeaderFromHeadersMap(Map<String, Object> headersMap) {
-		StringBuffer sb = new StringBuffer();
-
-		sb.append("{" + System.lineSeparator());
-		sb.append(appendKeyAndValue("@type", headersMap));
-		sb.append(appendKeyAndValue("issued", headersMap));
-		sb.append(appendKeyAndValue("issuerConnector", headersMap));
-		sb.append(appendKeyAndValue("correlationMessage", headersMap));
-		sb.append(appendKeyAndValue("transferContract", headersMap));
-		sb.append(appendKeyAndValue("modelVersion", headersMap));
-		sb.append(appendKeyAndValue("@id", headersMap));
-		sb.append("}");
-
-		return sb.toString();
-	}
-
-
-	private String appendKeyAndValue(String key, Map<String, Object> headersMap) {
-		StringBuffer sb = new StringBuffer();
-		String quote = "\"";
-		String space = "\" : \"";
-		String value = headersMap.get(key).toString();
-		
-		sb.append(quote);
-		if (key.equals("type") || key.equals("id")) {
-			sb.append("@");
-		}
-		sb.append(key);
-		sb.append(space);
-		sb.append(value);
-		sb.append(quote);
-		sb.append(System.lineSeparator());
-		
-		return sb.toString();
-	}
+	
 
 
 	private CloseableHttpClient getHttpClient() {

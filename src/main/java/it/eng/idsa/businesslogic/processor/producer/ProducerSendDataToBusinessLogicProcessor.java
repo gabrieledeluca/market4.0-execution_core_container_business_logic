@@ -186,7 +186,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         	}
         	case "http-header":
         	{
-    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload);
+    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload, headerParts);
     			break;
     		}
         	default:
@@ -207,7 +207,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         	}
         	case "http-header":
         	{
-    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload);
+    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload, headerParts);
     			break;
     		}
         	default:
@@ -220,7 +220,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         return response;
     }
 
-    private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) {
+    private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload, Map<String, Object> headerParts) {
 		logger.info("Forwarding Message: Body: http-header");
 
 		// Set F address
@@ -229,7 +229,11 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		// Set header and payload as http headers
 		
 		
-		String type = returnHeaderValue(header, "type");
+		headerParts.forEach((key, value) -> 
+			httpPost.addHeader(key, value.toString())
+		);
+		
+		String type = returnHeaderValue(header, "@type");
 		httpPost.addHeader("type", type);
 		String issued = returnHeaderValue(header, "issued");
 		httpPost.addHeader("issued", issued);
@@ -241,7 +245,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		httpPost.addHeader("transferContract", transferContract);
 		String modelVersion = returnHeaderValue(header, "modelVersion");
 		httpPost.addHeader("modelVersion", modelVersion);
-		String id = returnHeaderValue(header, "id");
+		String id = returnHeaderValue(header, "@id");
 		httpPost.addHeader("id", id);
 		// TO-DO for DAPS
 //		if(header.contains("token")) {
@@ -249,6 +253,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 //		}
 		
 		httpPost.addHeader("payload", payload);
+		
 		
 		CloseableHttpResponse response;
 
