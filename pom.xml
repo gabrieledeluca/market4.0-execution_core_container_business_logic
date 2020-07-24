@@ -318,6 +318,22 @@
 			<artifactId>commons-io</artifactId>
 			<version>2.6</version>
 		</dependency>
+
+		<!-- Usage Control -->
+
+		<dependency>
+			<groupId>de.fraunhofer.dataspaces.iese</groupId>
+			<artifactId>camel-interceptor-ucapp</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+
+		<dependency>
+			<groupId>de.fraunhofer.dataspaces.iese</groupId>
+			<artifactId>connector-camel-processors</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+
+		<!-- Usage Control -->
 		
 	</dependencies>
 

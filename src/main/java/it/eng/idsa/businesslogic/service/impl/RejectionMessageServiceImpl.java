@@ -26,7 +26,7 @@ import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 import it.eng.idsa.multipart.util.DateUtil;
 
 /**
- * 
+ *
  * @author Milan Karajovic and Gabriele De Luca
  *
  */
@@ -36,20 +36,20 @@ import it.eng.idsa.multipart.util.DateUtil;
 public class RejectionMessageServiceImpl implements RejectionMessageService{
 
 	@Value("${information.model.version}")
-    private String informationModelVersion;
-	
-	@Override 
+	private String informationModelVersion;
+
+	@Override
 	public void sendRejectionMessage(RejectionMessageType rejectionMessageType, Message message) {
 		Message rejectionMessage = createRejectionMessage(rejectionMessageType.toString(), message);
-		
+
 		MultipartMessage multipartMessage = new MultipartMessageBuilder()
-    			.withHeaderContent(rejectionMessage)
-    			.build();
-    	String multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
-		
+				.withHeaderContent(rejectionMessage)
+				.build();
+		String multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
+
 		throw new ExceptionForProcessor(multipartMessageString);
 	}
-	
+
 	private Message createRejectionMessage(String rejectionMessageType, Message message) {
 		Message rejectionMessage = null;
 		switch(rejectionMessageType) {
@@ -70,7 +70,10 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 				break;
 			case "REJECTION_COMMUNICATION_LOCAL_ISSUES":
 				rejectionMessage = createRejectionCommunicationLocalIssues(message);
-				break;	
+				break;
+			case "REJECTION_USAGE_CONTROL":
+				rejectionMessage = createRejectionUsageControl(message);
+				break;
 			default:
 				rejectionMessage = createResultMessage(message);
 				break;
@@ -78,7 +81,7 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 		return rejectionMessage;
 	}
 
-	private String getInformationModelVersion() {
+	/*private String getInformationModelVersion() {
 		String currentInformationModelVersion = null;
 		try {
 
@@ -105,11 +108,11 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 		}
 
 		return currentInformationModelVersion;
-	}
-	
-	/*private String getInformationModelVersion() {
-		return "2.1.0-SNAPSHOT";
 	}*/
+
+	private String getInformationModelVersion() {
+		return "2.1.0-SNAPSHOT";
+	}
 
 	public void setInformationModelVersion(String informationModelVersion) {
 		this.informationModelVersion = informationModelVersion;
@@ -119,7 +122,7 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 		return new ResultMessageBuilder()
 				._issuerConnector_(whoIAm())
 				._issued_(DateUtil.now())
-                ._modelVersion_(getInformationModelVersion())
+				._modelVersion_(getInformationModelVersion())
 				._recipientConnector_(asList(header.getIssuerConnector()))
 				._correlationMessage_(header.getId())
 				.build();
@@ -129,18 +132,18 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 		return new RejectionMessageBuilder()
 				._issuerConnector_(whoIAm())
 				._issued_(DateUtil.now())
-                ._modelVersion_(getInformationModelVersion())
+				._modelVersion_(getInformationModelVersion())
 				._recipientConnector_(header!=null?asList(header.getIssuerConnector()):asList(URI.create("auto-generated")))
 				._correlationMessage_(header!=null?header.getId():URI.create(""))
 				._rejectionReason_(RejectionReason.MALFORMED_MESSAGE)
 				.build();
 	}
-	
+
 	private Message createRejectionToken(Message header) {
 		return new RejectionMessageBuilder()
 				._issuerConnector_(whoIAm())
 				._issued_(DateUtil.now())
-                ._modelVersion_(getInformationModelVersion())
+				._modelVersion_(getInformationModelVersion())
 				._recipientConnector_(asList(header.getIssuerConnector()))
 				._correlationMessage_(header.getId())
 				._rejectionReason_(RejectionReason.NOT_AUTHENTICATED)
@@ -149,7 +152,7 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 
 
 	private URI whoIAm() {
-		//TODO 
+		//TODO
 		return URI.create("auto-generated");
 	}
 
@@ -157,32 +160,42 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 		return new RejectionMessageBuilder()
 				._issuerConnector_(URI.create("auto-generated"))
 				._issued_(DateUtil.now())
-                ._modelVersion_(getInformationModelVersion())
+				._modelVersion_(getInformationModelVersion())
 				//._recipientConnectors_(header!=null?asList(header.getIssuerConnector()):asList(URI.create("auto-generated")))
 				._correlationMessage_(URI.create("auto-generated"))
 				._rejectionReason_(RejectionReason.MALFORMED_MESSAGE)
 				.build();
 	}
-	
+
 	private Message createRejectionTokenLocalIssues(Message header) {
 		return new RejectionMessageBuilder()
 				._issuerConnector_(header.getIssuerConnector())
 				._issued_(DateUtil.now())
-                ._modelVersion_(getInformationModelVersion())
+				._modelVersion_(getInformationModelVersion())
 				._recipientConnector_(asList(header.getIssuerConnector()))
 				._correlationMessage_(header.getId())
 				._rejectionReason_(RejectionReason.NOT_AUTHENTICATED)
 				.build();
 	}
-	
+
 	private Message createRejectionCommunicationLocalIssues(Message header) {
 		return new RejectionMessageBuilder()
 				._issuerConnector_(header.getIssuerConnector())
 				._issued_(DateUtil.now())
-                ._modelVersion_(getInformationModelVersion())
+				._modelVersion_(getInformationModelVersion())
 				._recipientConnector_(asList(header.getIssuerConnector()))
 				._correlationMessage_(header.getId())
 				._rejectionReason_(RejectionReason.NOT_FOUND)
+				.build();
+	}
+	private Message createRejectionUsageControl(Message header) {
+		return new RejectionMessageBuilder()
+				._issuerConnector_(header.getIssuerConnector())
+				._issued_(DateUtil.now())
+				._modelVersion_(getInformationModelVersion())
+				._recipientConnector_(asList(header.getIssuerConnector()))
+				._correlationMessage_(header.getId())
+				._rejectionReason_(RejectionReason.NOT_AUTHORIZED)
 				.build();
 	}
 }
