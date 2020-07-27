@@ -55,10 +55,10 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		Map<String, Object> multipartMessageParts = new HashMap<String, Object>();
 		
 		if (eccHttpSendRouter.equals("http-header")) {
-			header = getHeaderFromHeadersMap(exchange.getIn().getHeaders());
-			payload = exchange.getIn().getHeader("payload").toString();
-			System.out.println(header);
-			System.out.println(payload);
+			String headerFromHeaders = getHeaderFromHeadersMap(exchange.getIn().getHeaders());
+			System.out.println(headerFromHeaders);
+			System.out.println(exchange.getIn().getHeader("payload").toString());
+			exchange.getIn().getHeaders().put("header", headerFromHeaders);
 		}
 		
 		if(!exchange.getIn().getHeaders().containsKey("header"))
@@ -127,18 +127,23 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 
 	private String appendKeyAndValue(String key, Map<String, Object> headersMap) {
 		StringBuffer sb = new StringBuffer();
-		String quote = "\"";
-		String space = "\" : \"";
+		String lineStart = "  \"";
+		String lineEnd = "\",";
+		String spaceBetweenKeyAndValue = "\" : \"";
 		String value = headersMap.get(key).toString();
 		
-		sb.append(quote);
+		sb.append(lineStart);
 		if (key.equals("type") || key.equals("id")) {
 			sb.append("@");
 		}
 		sb.append(key);
-		sb.append(space);
+		sb.append(spaceBetweenKeyAndValue);
 		sb.append(value);
-		sb.append(quote);
+		if (!key.equals("id")) {
+			sb.append(lineEnd);
+		}else {
+			sb.append("\"");
+		}
 		sb.append(System.lineSeparator());
 		
 		return sb.toString();

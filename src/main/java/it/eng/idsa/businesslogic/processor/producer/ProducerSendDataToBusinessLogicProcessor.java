@@ -222,6 +222,9 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 
     private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload, Map<String, Object> headerParts) {
 		logger.info("Forwarding Message: Body: http-header");
+		
+		System.out.println(header);
+		System.out.println(payload);
 
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
