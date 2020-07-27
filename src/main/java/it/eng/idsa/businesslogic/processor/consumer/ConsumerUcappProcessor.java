@@ -1,8 +1,6 @@
 package it.eng.idsa.businesslogic.processor.consumer;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonSyntaxException;
+import com.google.gson.*;
 import com.google.gson.internal.LinkedTreeMap;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.IdsMsgTarget;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.IdsUseObject;
@@ -36,7 +34,7 @@ public class ConsumerUcappProcessor implements Processor {
 
     private Gson gson;
     private static final Logger logger = LoggerFactory.getLogger(ConsumerUcappProcessor.class);
-    @Value("${application.isEnabledUsageControl?:false}")
+    @Value("${application.isEnabledUsageControl}")
     private boolean isEnabledUsageControl;
     @Autowired
     private UcService ucService;
@@ -80,7 +78,10 @@ public class ConsumerUcappProcessor implements Processor {
             ucObj = gson.fromJson(transferedDataObject, UsageControlObject.class);
             isUsageControlObject = true;
 
-            if (isUsageControlObject && null != ucObj) {
+            if (isUsageControlObject
+                    && null != ucObj
+                    && null != ucObj.getMeta()
+                    && null != ucObj.getPayload()) {
                 String targetArtifactId = ucObj.getMeta().getTargetArtifact().getId().toString();
                 IdsMsgTarget idsMsgTarget = getIdsMsgTarget();
                 if (null != ucObj.getPayload() && !(CachedOutputStream.class.equals(ucObj.getPayload().getClass().getEnclosingClass()))) {
@@ -101,7 +102,7 @@ public class ConsumerUcappProcessor implements Processor {
                     } else if (null == result) {
                         ucObj.setPayload(null);
                     }
-                    multipartMessageParts.put("payload", ucObj.getPayload());
+                    multipartMessageParts.put("payload", extractPayloadFromJson(ucObj.getPayload()));
                     exchange.getIn().setBody(multipartMessageParts);
                 }
             }
@@ -135,6 +136,13 @@ public class ConsumerUcappProcessor implements Processor {
             obj = null;
         }
         return obj;
+    }
+
+    private String extractPayloadFromJson(JsonElement payload) {
+        final JsonObject asJsonObject = payload.getAsJsonObject();
+        JsonElement payloadInner = asJsonObject.get("payload");
+        if (null != payloadInner) return payloadInner.getAsString();
+        return payload.toString();
     }
 
 

@@ -114,7 +114,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
         this.connectorURI = connectorURI;
     }
 
-    @Value("${it.eng.idsa.service.resources.title ?:TemperatureData}")
+    @Value("${it.eng.idsa.service.resources.title ?:MultipartData}")
     public void setResourceTitle(String resourceTitle) {
         this.resourceTitle = resourceTitle;
     }
