@@ -1,20 +1,19 @@
 package it.eng.idsa.businesslogic.processor.consumer;
 
 import com.google.gson.*;
-import com.google.gson.internal.LinkedTreeMap;
-import de.fraunhofer.dataspaces.iese.camel.interceptor.model.IdsMsgTarget;
-import de.fraunhofer.dataspaces.iese.camel.interceptor.model.IdsUseObject;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import de.fraunhofer.dataspaces.iese.camel.interceptor.model.Meta;
+import de.fraunhofer.dataspaces.iese.camel.interceptor.model.TargetArtifact;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.UsageControlObject;
-import de.fraunhofer.dataspaces.iese.camel.interceptor.service.UcService;
+import de.fraunhofer.iais.eis.ArtifactRequestMessage;
+import de.fraunhofer.iais.eis.ArtifactResponseMessage;
 import de.fraunhofer.iais.eis.Message;
-import it.eng.idsa.businesslogic.processor.producer.ProducerUcappProcessor;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import org.apache.camel.Exchange;
-import org.apache.camel.NamedNode;
 import org.apache.camel.Processor;
-import org.apache.camel.converter.stream.CachedOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +21,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+
 
 /**
  * @author Antonio Scatoloni and Gabriele De Luca
@@ -34,78 +41,56 @@ public class ConsumerUcappProcessor implements Processor {
 
     private Gson gson;
     private static final Logger logger = LoggerFactory.getLogger(ConsumerUcappProcessor.class);
+
     @Value("${application.isEnabledUsageControl}")
     private boolean isEnabledUsageControl;
-    @Autowired
-    private UcService ucService;
+
     @Autowired
     private MultipartMessageService multipartMessageService;
+
     @Autowired
     private RejectionMessageService rejectionMessageService;
 
-    private NamedNode definition;
-
-    public ConsumerUcappProcessor(UcService ucService) {
-        gson = ProducerUcappProcessor.createGson();
-    }
-
-    public void setDefinition(NamedNode definition) {
-        this.definition = definition;
+    public ConsumerUcappProcessor() {
+        gson = createGson();
     }
 
     @Override
     public void process(Exchange exchange) {
+        Message message = null;
+        boolean isUsageControlObject = true;
         if (!isEnabledUsageControl) {
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setBody(exchange.getIn().getBody());
             return;
         }
-        Message message = null;
         try {
+            Map<String, Object> headerParts = exchange.getIn().getHeaders();
             Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
+            String originalHeader = headerParts.get("Original-Message-Header").toString();
             String header = multipartMessageParts.get("header").toString();
-            String payload = multipartMessageParts.get("payload").toString();
-            message = multipartMessageService.getMessage(header);
-            //String dataAsString = exchange.getIn().getBody(String.class);
-            logger.info("from: " + exchange.getFromEndpoint());
-            logger.info("Message Body: " + payload);
-            logger.info("Message Body Out: " + exchange.getOut().getBody(String.class));
-
-            // Dummy connectionid
-            UsageControlObject ucObj = null;
-            JsonElement transferedDataObject = getDataObject(payload);
-            boolean isUsageControlObject = false;
-            ucObj = gson.fromJson(transferedDataObject, UsageControlObject.class);
-            isUsageControlObject = true;
-
-            if (isUsageControlObject
-                    && null != ucObj
-                    && null != ucObj.getMeta()
-                    && null != ucObj.getPayload()) {
-                String targetArtifactId = ucObj.getMeta().getTargetArtifact().getId().toString();
-                IdsMsgTarget idsMsgTarget = getIdsMsgTarget();
-                if (null != ucObj.getPayload() && !(CachedOutputStream.class.equals(ucObj.getPayload().getClass().getEnclosingClass()))) {
-                    logger.info("Message Body In: " + ucObj.getPayload().toString());
-
-                    IdsUseObject idsUseObject = new IdsUseObject();
-                    idsUseObject.setTargetDataUri(targetArtifactId);
-                    idsUseObject.setMsgTarget(idsMsgTarget);
-                    idsUseObject.setDataObject(ucObj.getPayload());
-
-                    Object result = ucService.enforceUsageControl(idsUseObject);
-                    // LOGGER.info("Message Body Out: " + dataObject.toString());
-                    if (result instanceof LinkedTreeMap<?, ?>) {
-                        final LinkedTreeMap<?, ?> treeMap = (LinkedTreeMap<?, ?>) result;
-                        final JsonElement jsonElement = gson.toJsonTree(treeMap);
-                        ucObj.setPayload(jsonElement);
-                        logger.info("Result from Usage Control: " + jsonElement.toString());
-                    } else if (null == result) {
-                        ucObj.setPayload(null);
-                    }
-                    multipartMessageParts.put("payload", extractPayloadFromJson(ucObj.getPayload()));
-                    exchange.getIn().setBody(multipartMessageParts);
-                }
+            message = multipartMessageService.getMessage(originalHeader);
+            Message responseMessage = multipartMessageService.getMessage(header);
+            ArtifactRequestMessage artifactRequestMessage = null;
+            if (message instanceof  ArtifactRequestMessage && !(responseMessage instanceof ArtifactResponseMessage)){
+                throw new Exception("Response Header Type is not compatible with Usage Control Required");
             }
+            try {
+                artifactRequestMessage = (ArtifactRequestMessage) message;
+            } catch (Exception e) {
+                isUsageControlObject = false;
+            }
+            if (isUsageControlObject) {
+                String payloadToEnforce = createUsageControlObject(artifactRequestMessage.getRequestedArtifact(), multipartMessageParts.get("payload").toString());
+                logger.info("from: " + exchange.getFromEndpoint());
+                logger.info("Message Body: " + payloadToEnforce);
+                logger.info("Message Body Out: " + exchange.getOut().getBody(String.class));
+
+                multipartMessageParts.put("payload", payloadToEnforce);
+                exchange.getIn().setBody(multipartMessageParts);
+                exchange.getMessage().setBody(multipartMessageParts);
+            }
+            headerParts.remove("Original-Message-Header");
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setBody(exchange.getIn().getBody());
         } catch (Exception e) {
@@ -116,34 +101,56 @@ public class ConsumerUcappProcessor implements Processor {
         }
     }
 
-    //TODO
-    public static IdsMsgTarget getIdsMsgTarget() {
-        IdsMsgTarget idsMsgTarget = new IdsMsgTarget();
-        idsMsgTarget.setName("Anwendung A");
-        // idsMsgTarget.setAppUri(target.toString());
-        idsMsgTarget.setAppUri("http://ziel-app");
-        return idsMsgTarget;
-    }
-
-    private JsonElement getDataObject(String s) {
-        JsonElement obj = null;
-        try {
-            JsonElement jsonElement = gson.fromJson(s, JsonElement.class);
-            if (null != jsonElement && !(jsonElement.isJsonArray() && jsonElement.getAsJsonArray().size() == 0)) {
-                obj = jsonElement;
+    public static Gson createGson() {
+        Gson gson = new GsonBuilder().registerTypeAdapter(ZonedDateTime.class, new TypeAdapter<ZonedDateTime>() {
+            @Override
+            public void write(JsonWriter writer, ZonedDateTime zdt) throws IOException {
+                writer.value(zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
             }
-        } catch (JsonSyntaxException jse) {
-            obj = null;
+
+            @Override
+            public ZonedDateTime read(JsonReader in) throws IOException {
+                return ZonedDateTime.parse(in.nextString(), DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            }
+        }).enableComplexMapKeySerialization().create();
+
+        return gson;
+    }
+
+
+    private String createUsageControlObject(URI targetId, String payload) throws URISyntaxException {
+        UsageControlObject usageControlObject = new UsageControlObject();
+        JsonElement jsonElement = gson.fromJson(createJsonPayload(payload), JsonElement.class);
+        usageControlObject.setPayload(jsonElement);
+        Meta meta = new Meta();
+        meta.setAssignee(new URI("http://w3c.org/eng/connector/consumer")); //TODO
+        meta.setAssigner(new URI("http://w3c.org/eng/connector/provider")); //TODO
+        TargetArtifact targetArtifact = new TargetArtifact();
+        LocalDateTime localDateTime = LocalDateTime.now();
+        ZonedDateTime zonedDateTime = ZonedDateTime.of(localDateTime, ZoneId.of("CET"));
+        targetArtifact.setCreationDate(zonedDateTime);
+        targetArtifact.setId(targetId);
+        meta.setTargetArtifact(targetArtifact);
+        usageControlObject.setMeta(meta);
+        String usageControlObjectPayload = gson.toJson(usageControlObject, UsageControlObject.class);
+        return usageControlObjectPayload;
+    }
+
+    private String createJsonPayload(String payload) {
+        boolean isJson = true;
+        try {
+            JsonParser.parseString(payload);
+        } catch (JsonSyntaxException e) {
+            isJson = false;
         }
-        return obj;
+        if (!isJson) {
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append("{");
+            stringBuilder.append("\"payload\":" + "\"" + payload + "\"");
+            stringBuilder.append("}");
+            return stringBuilder.toString();
+        }
+        return payload;
     }
-
-    private String extractPayloadFromJson(JsonElement payload) {
-        final JsonObject asJsonObject = payload.getAsJsonObject();
-        JsonElement payloadInner = asJsonObject.get("payload");
-        if (null != payloadInner) return payloadInner.getAsString();
-        return payload.toString();
-    }
-
 
 }

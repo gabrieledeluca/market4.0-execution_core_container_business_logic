@@ -80,97 +80,104 @@ public class CamelRouteProducer extends RouteBuilder {
 		camelContext.getShutdownStrategy().setTimeout(3);
 		//@formatter:off
 		onException(ExceptionForProcessor.class, RuntimeException.class)
-				.handled(true)
-				.process(processorException);
+			.handled(true)
+			.process(processorException);
 
 		if(!isEnabledDataAppWebSocket) {
-			// Camel SSL - Endpoint: A - Body binary
-			from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageBodyBinary")
-					.process(parseReceivedDataProcessorBodyBinary)
-					.choice()
-					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
-					.process(getTokenFromDapsProcessor)
-					.process(producerUcappProcessor)
-					// Send data to Endpoint B
-					.process(sendDataToBusinessLogicProcessor)
-					.process(parseReceivedResponseMessage)
-					.process(validateTokenProcessor)
-					.process(sendResponseToDataAppProcessor)
-					.choice()
-					.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
-					.process(sendTransactionToCHProcessor)
-					.endChoice()
-					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
-					// Usage Control App Enforcement
-					.process(producerUcappProcessor)
-					// Send data to Endpoint B
-					.process(sendDataToBusinessLogicProcessor)
-					.process(parseReceivedResponseMessage)
-					.process(sendResponseToDataAppProcessor)
-					.choice()
-					.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
-					.process(sendTransactionToCHProcessor)
-					.endChoice()
-					.endChoice();
+            // Camel SSL - Endpoint: A - Body binary
+            from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageBodyBinary")
+                    .process(parseReceivedDataProcessorBodyBinary)
+                    .choice()
+                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
+                            .process(getTokenFromDapsProcessor)
+    //						.process(sendToActiveMQ)
+    //						.process(receiveFromActiveMQ)
+                            // Send data to Endpoint B
+                            .process(sendDataToBusinessLogicProcessor)
+                            .process(parseReceivedResponseMessage)
+                            .process(validateTokenProcessor)
+                            .process(sendResponseToDataAppProcessor)
+                            .process(producerUcappProcessor)
+                            .choice()
+                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+                                .process(sendTransactionToCHProcessor)
+                            .endChoice()
+                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
+    //						.process(sendToActiveMQ)
+    //						.process(receiveFromActiveMQ)
+                            // Send data to Endpoint B
+                            .process(sendDataToBusinessLogicProcessor)
+                            .process(parseReceivedResponseMessage)
+                            .process(sendResponseToDataAppProcessor)
+                            .process(producerUcappProcessor)
+                            .choice()
+                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+                                    .process(sendTransactionToCHProcessor)
+                            .endChoice()
+                    .endChoice();
 
-			// Camel SSL - Endpoint: A - Body form-data
-			from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageBodyFormData")
-					.process(parseReceivedDataProcessorBodyFormData)
-					.choice()
-					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
-					.process(getTokenFromDapsProcessor)
-					.process(producerUcappProcessor)
-					// Send data to Endpoint B
-					.process(sendDataToBusinessLogicProcessor)
-					.process(parseReceivedResponseMessage)
-					.process(validateTokenProcessor)
-					.process(sendResponseToDataAppProcessor)
-					.choice()
-					.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
-					.process(sendTransactionToCHProcessor)
-					.endChoice()
-					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
-					.process(producerUcappProcessor)
-					// Send data to Endpoint B
-					.process(sendDataToBusinessLogicProcessor)
-					.process(parseReceivedResponseMessage)
-					.process(sendResponseToDataAppProcessor)
-					.choice()
-					.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
-					.process(sendTransactionToCHProcessor)
-					.endChoice()
-					.endChoice();
-		} else {
-			// End point A. Communication between Data App and ECC Producer.
-			//fixedRate=true&period=10s
-			from("timer://timerEndpointA?repeatCount=-1") //EndPoint A
-					.process(fileRecreatorProcessor)
-					.process(parseReceivedDataFromDAppProcessorBodyBinary)
-					.choice()
-					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
-					.process(getTokenFromDapsProcessor)
-					.process(producerUcappProcessor)
-					// Send data to Endpoint B
-					.process(sendDataToBusinessLogicProcessor)
-					.process(parseReceivedResponseMessage)
-					.process(validateTokenProcessor)
-					//.process(sendResponseToDataAppProcessor)
-					.process(sendResponseToDataAppProcessor)
-					.choice()
-					.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
-					.process(sendTransactionToCHProcessor)
-					.endChoice()
-					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
-					.process(producerUcappProcessor)
-					// Send data to Endpoint B
-					.process(sendDataToBusinessLogicProcessor)
-					.process(parseReceivedResponseMessage)
-					//.process(sendResponseToDataAppProcessor)
-					.process(sendResponseToDataAppProcessor)
-					.choice()
-					.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
-					.process(sendTransactionToCHProcessor)
-					.endChoice()
+            // Camel SSL - Endpoint: A - Body form-data
+            from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageBodyFormData")
+                    .process(parseReceivedDataProcessorBodyFormData)
+                    .choice()
+                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
+                            .process(getTokenFromDapsProcessor)
+    //						.process(sendToActiveMQ)
+    //						.process(receiveFromActiveMQ)
+                            // Send data to Endpoint B
+                            .process(sendDataToBusinessLogicProcessor)
+                            .process(parseReceivedResponseMessage)
+                            .process(validateTokenProcessor)
+                            .process(sendResponseToDataAppProcessor)
+                            .process(producerUcappProcessor)
+                            .choice()
+                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+                                    .process(sendTransactionToCHProcessor)
+                            .endChoice()
+                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
+        //					.process(sendToActiveMQ)
+        //					.process(receiveFromActiveMQ)
+                            // Send data to Endpoint B
+                            .process(sendDataToBusinessLogicProcessor)
+                            .process(parseReceivedResponseMessage)
+                            .process(sendResponseToDataAppProcessor)
+                            .process(producerUcappProcessor)
+                            .choice()
+                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+                                    .process(sendTransactionToCHProcessor)
+                            .endChoice()
+                    .endChoice();
+            } else {
+				// End point A. Communication between Data App and ECC Producer.
+				//fixedRate=true&period=10s
+				from("timer://timerEndpointA?repeatCount=-1") //EndPoint A
+						.process(fileRecreatorProcessor)
+						.process(parseReceivedDataFromDAppProcessorBodyBinary)
+						.choice()
+							.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
+								.process(getTokenFromDapsProcessor)
+								// Send data to Endpoint B
+								.process(sendDataToBusinessLogicProcessor)
+								.process(parseReceivedResponseMessage)
+								.process(validateTokenProcessor)
+								//.process(sendResponseToDataAppProcessor)
+								.process(sendResponseToDataAppProcessor)
+								.process(producerUcappProcessor)
+								.choice()
+								.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+									.process(sendTransactionToCHProcessor)
+								.endChoice()
+									.when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
+										// Send data to Endpoint B
+										.process(sendDataToBusinessLogicProcessor)
+										.process(parseReceivedResponseMessage)
+										//.process(sendResponseToDataAppProcessor)
+										.process(sendResponseToDataAppProcessor)
+										.process(producerUcappProcessor)
+								.choice()
+									.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+									.process(sendTransactionToCHProcessor)
+								.endChoice()
 					.endChoice();
 			//@formatter:on
 		}

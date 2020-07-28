@@ -47,6 +47,9 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	@Value("${application.openDataAppReceiverRouter}")
 	private String openDataAppReceiverRouter;
 
+	@Value("${application.isEnabledUsageControl}")
+	private boolean isEnabledUsageControl;
+
 	@Autowired
 	private ApplicationConfiguration configuration;
 
@@ -55,6 +58,8 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
+
+	private String originalHeader;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
@@ -69,6 +74,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		}
 		Message message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
 
+		this.originalHeader = header;
 		// Send data to the endpoint F for the Open API Data App
 		CloseableHttpResponse response = null;
 		switch(openDataAppReceiverRouter) {
@@ -208,6 +214,10 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 			}else { 
 				logger.info("data sent to destination: "+openApiDataAppAddress);
 				logger.info("Successful response: "+ responseString);
+				//Save original Header for Usage Control Enforcement
+				if(isEnabledUsageControl) {
+					exchange.getOut().setHeader("Original-Message-Header", originalHeader);
+				}
 				String	header = multipartMessageService.getHeaderContentString(responseString);
 				String payload = multipartMessageService.getPayloadContent(responseString);
 				exchange.getOut().setHeader("header", header);
