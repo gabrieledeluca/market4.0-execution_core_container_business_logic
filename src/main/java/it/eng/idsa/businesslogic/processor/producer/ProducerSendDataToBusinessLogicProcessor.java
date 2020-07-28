@@ -186,7 +186,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         	}
         	case "http-header":
         	{
-    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload, headerParts);
+    			response =  this.forwardMessageHttpHeader(forwardTo, messageWithToken, payload, headerParts);
     			break;
     		}
         	default:
@@ -250,6 +250,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		httpPost.addHeader("modelVersion", modelVersion);
 		String id = returnHeaderValue(header, "@id");
 		httpPost.addHeader("id", id);
+		httpPost.addHeader("headerBindingDone", "true");
 		// TO-DO for DAPS
 //		if(header.contains("token")) {
 //			httpPost.addHeader("token", token);

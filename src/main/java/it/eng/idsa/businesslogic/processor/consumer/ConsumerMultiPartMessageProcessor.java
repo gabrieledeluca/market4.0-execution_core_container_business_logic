@@ -2,6 +2,7 @@ package it.eng.idsa.businesslogic.processor.consumer;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -54,7 +55,7 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		Map<String, Object> headesParts = new HashMap<String, Object>();
 		Map<String, Object> multipartMessageParts = new HashMap<String, Object>();
 		
-		if (eccHttpSendRouter.equals("http-header")) {
+		if (eccHttpSendRouter.equals("http-header") && exchange.getIn().getHeader("headerBindingDone")!= null) {
 			String headerFromHeaders = getHeaderFromHeadersMap(exchange.getIn().getHeaders());
 			System.out.println(headerFromHeaders);
 			System.out.println(exchange.getIn().getHeader("payload").toString());
@@ -98,6 +99,7 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 			}
 
 			// Return exchange
+			
 			exchange.getOut().setHeaders(headesParts);
 			exchange.getOut().setBody(multipartMessageParts);
 			
