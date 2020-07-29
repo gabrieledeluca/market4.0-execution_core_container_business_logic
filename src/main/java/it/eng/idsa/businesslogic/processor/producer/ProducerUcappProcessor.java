@@ -20,6 +20,7 @@ import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.converter.stream.CachedOutputStream;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,8 +95,8 @@ public class ProducerUcappProcessor implements Processor {
                         final JsonElement jsonElement = gson.toJsonTree(treeMap);
                         ucObj.setPayload(jsonElement);
                         logger.info("Result from Usage Control: " + jsonElement.toString());
-                    } else if (null == result) {
-                        ucObj.setPayload(null);
+                    } else if (null == result || StringUtils.isEmpty(result.toString())) {
+                        throw new Exception("Usage Control Enforcement with EMPTY RESULT encountered.");
                     }
                     // Prepare Response
                     MultipartMessage multipartMessage = new MultipartMessageBuilder()

@@ -72,8 +72,8 @@ public class ConsumerUcappProcessor implements Processor {
             message = multipartMessageService.getMessage(originalHeader);
             Message responseMessage = multipartMessageService.getMessage(header);
             ArtifactRequestMessage artifactRequestMessage = null;
-            if (message instanceof  ArtifactRequestMessage && !(responseMessage instanceof ArtifactResponseMessage)){
-                throw new Exception("Response Header Type is not compatible with Usage Control Required");
+            if (message instanceof  ArtifactRequestMessage && !(responseMessage instanceof ArtifactResponseMessage)) {
+                throw new Exception("Response Header Type is not compatible with Usage Control Required.");
             }
             try {
                 artifactRequestMessage = (ArtifactRequestMessage) message;
