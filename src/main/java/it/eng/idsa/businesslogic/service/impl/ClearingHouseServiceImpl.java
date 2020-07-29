@@ -3,41 +3,17 @@
  */
 package it.eng.idsa.businesslogic.service.impl;
 
-import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.GregorianCalendar;
-import java.util.Properties;
-import java.util.UUID;
-
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.apache.maven.project.MavenProject;
-import org.json.simple.JsonObject;
-import org.json.simple.Jsoner;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
-import de.fraunhofer.iais.eis.LogNotification;
-import de.fraunhofer.iais.eis.LogNotificationBuilder;
-import de.fraunhofer.iais.eis.Message;
-import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
 import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
 import it.eng.idsa.businesslogic.service.ClearingHouseService;
 import it.eng.idsa.businesslogic.service.HashFileService;
-import it.eng.idsa.clearinghouse.model.Body;
-import it.eng.idsa.clearinghouse.model.NotificationContent;
 
 
 /**
