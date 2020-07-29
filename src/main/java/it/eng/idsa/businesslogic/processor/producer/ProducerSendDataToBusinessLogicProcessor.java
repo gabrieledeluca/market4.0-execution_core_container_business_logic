@@ -226,6 +226,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		System.out.println(header);
 		System.out.println(payload);
 
+
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
 		
@@ -256,8 +257,28 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 //			httpPost.addHeader("token", token);
 //		}
 		
-		httpPost.addHeader("payload", payload);
-		
+		// for payloads bigger then 8KB
+		if (payload.length() > 8192) {
+			int payloadParts = payload.length() / 8192;
+			if ((payload.length() % 8192) > 0) {
+				payloadParts++;
+			}
+			System.out.println(payloadParts);
+			int start = 0;
+			int partLength = payload.length() / payloadParts;
+			int end = payload.length() / payloadParts;
+			for (int i = 1; i < payloadParts; i++) {
+				httpPost.addHeader("payloadPart-"+i, payload.substring(start, end));
+				start = end + 1;
+				end = end + partLength;
+			}
+			if ((payload.length() % 8192) > 0) {
+				httpPost.addHeader("payloadPart-" + payloadParts, payload.substring(start, payload.length() - 1));
+			}
+		} else {
+			httpPost.addHeader("payload", payload);
+		}
+		System.out.println(payload);
 		
 		CloseableHttpResponse response;
 
