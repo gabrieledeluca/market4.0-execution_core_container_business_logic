@@ -57,7 +57,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 	ConsumerWebSocketSendDataToDataAppProcessor sendDataToDataAppProcessorOverWS;
 
 	@Autowired
-	ConsumerUcappProcessor consumerUcappProcessor;	
+	ConsumerUsageControlProcessor consumerUsageControlProcessor;
 
 	@Autowired
 	CamelContext camelContext;
@@ -101,8 +101,6 @@ public class CamelRouteConsumer extends RouteBuilder {
 					.choice()
 					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
 						.process(validateTokenProcessor)
-						//.process(sendToActiveMQ)
-						//.process(receiveFromActiveMQ)
 						// Send to the Endpoint: F
 						.choice()
 						.when(header("Is-Enabled-DataApp-WebSocket").isEqualTo(true))
@@ -112,7 +110,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 						.endChoice()
 						.process(multiPartMessageProcessor)
 						.process(getTokenFromDapsProcessor)
-						.process(consumerUcappProcessor)
+						.process(consumerUsageControlProcessor)
 						.process(sendDataToBusinessLogicProcessor)
 						.choice()
 						.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
@@ -127,7 +125,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 							.process(sendDataToDataAppProcessor)
 						.endChoice()
 						.process(multiPartMessageProcessor)
-						.process(consumerUcappProcessor)
+						.process(consumerUsageControlProcessor)
 						.process(sendDataToBusinessLogicProcessor)
 						.choice()
 						.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
@@ -151,7 +149,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 							.endChoice()
 								.process(multiPartMessageProcessor)
 								.process(getTokenFromDapsProcessor)
-								.process(consumerUcappProcessor)
+								.process(consumerUsageControlProcessor)
 								.process(sendDataToBusinessLogicProcessor)
 							.choice()
 								.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
@@ -166,7 +164,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 								.process(sendDataToDataAppProcessor)
 							.endChoice()
 							.process(multiPartMessageProcessor)
-							.process(consumerUcappProcessor)
+							.process(consumerUsageControlProcessor)
 							.process(sendDataToBusinessLogicProcessor)
 							.choice()
 								.when(header("Is-Enabled-Clearing-House").isEqualTo(true))

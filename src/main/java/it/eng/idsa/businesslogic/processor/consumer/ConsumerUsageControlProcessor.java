@@ -9,6 +9,7 @@ import de.fraunhofer.dataspaces.iese.camel.interceptor.model.UsageControlObject;
 import de.fraunhofer.iais.eis.ArtifactRequestMessage;
 import de.fraunhofer.iais.eis.ArtifactResponseMessage;
 import de.fraunhofer.iais.eis.Message;
+import de.fraunhofer.iais.eis.RejectionMessage;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
@@ -37,10 +38,13 @@ import java.util.Map;
  */
 @ComponentScan("de.fraunhofer.dataspaces.iese")
 @Component
-public class ConsumerUcappProcessor implements Processor {
+public class ConsumerUsageControlProcessor implements Processor {
 
     private Gson gson;
-    private static final Logger logger = LoggerFactory.getLogger(ConsumerUcappProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(ConsumerUsageControlProcessor.class);
+
+    private Message requestMessage;
+    private Message responseMessage;
 
     @Value("${application.isEnabledUsageControl}")
     private boolean isEnabledUsageControl;
@@ -51,13 +55,12 @@ public class ConsumerUcappProcessor implements Processor {
     @Autowired
     private RejectionMessageService rejectionMessageService;
 
-    public ConsumerUcappProcessor() {
+    public ConsumerUsageControlProcessor() {
         gson = createGson();
     }
 
     @Override
     public void process(Exchange exchange) {
-        Message message = null;
         boolean isUsageControlObject = true;
         if (!isEnabledUsageControl) {
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
@@ -69,19 +72,24 @@ public class ConsumerUcappProcessor implements Processor {
             Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
             String originalHeader = headerParts.get("Original-Message-Header").toString();
             String header = multipartMessageParts.get("header").toString();
-            message = multipartMessageService.getMessage(originalHeader);
-            Message responseMessage = multipartMessageService.getMessage(header);
+            requestMessage = multipartMessageService.getMessage(originalHeader);
+            responseMessage = multipartMessageService.getMessage(header);
             ArtifactRequestMessage artifactRequestMessage = null;
-            if (message instanceof  ArtifactRequestMessage && !(responseMessage instanceof ArtifactResponseMessage)) {
+            if(null == requestMessage || null == responseMessage)
+                throw new Exception("Request or Response messages are empty.");
+            if (requestMessage instanceof  ArtifactRequestMessage
+                    && !(responseMessage instanceof ArtifactResponseMessage)
+                    && !(responseMessage instanceof RejectionMessage)) {
                 throw new Exception("Response Header Type is not compatible with Usage Control Required.");
             }
             try {
-                artifactRequestMessage = (ArtifactRequestMessage) message;
+                artifactRequestMessage = (ArtifactRequestMessage) requestMessage;
             } catch (Exception e) {
                 isUsageControlObject = false;
             }
             if (isUsageControlObject) {
-                String payloadToEnforce = createUsageControlObject(artifactRequestMessage.getRequestedArtifact(), multipartMessageParts.get("payload").toString());
+                String payloadToEnforce = createUsageControlObject(artifactRequestMessage.getRequestedArtifact(),
+                        multipartMessageParts.get("payload").toString());
                 logger.info("from: " + exchange.getFromEndpoint());
                 logger.info("Message Body: " + payloadToEnforce);
                 logger.info("Message Body Out: " + exchange.getOut().getBody(String.class));
@@ -97,7 +105,7 @@ public class ConsumerUcappProcessor implements Processor {
             logger.error("Usage Control Enforcement has failed with MESSAGE: " + e.getMessage());
             rejectionMessageService.sendRejectionMessage(
                     RejectionMessageType.REJECTION_USAGE_CONTROL,
-                    message);
+                    requestMessage);
         }
     }
 
@@ -123,8 +131,8 @@ public class ConsumerUcappProcessor implements Processor {
         JsonElement jsonElement = gson.fromJson(createJsonPayload(payload), JsonElement.class);
         usageControlObject.setPayload(jsonElement);
         Meta meta = new Meta();
-        meta.setAssignee(new URI("http://w3c.org/eng/connector/consumer")); //TODO
-        meta.setAssigner(new URI("http://w3c.org/eng/connector/provider")); //TODO
+        meta.setAssignee(requestMessage.getIssuerConnector());
+        meta.setAssigner(responseMessage.getIssuerConnector());
         TargetArtifact targetArtifact = new TargetArtifact();
         LocalDateTime localDateTime = LocalDateTime.now();
         ZonedDateTime zonedDateTime = ZonedDateTime.of(localDateTime, ZoneId.of("CET"));

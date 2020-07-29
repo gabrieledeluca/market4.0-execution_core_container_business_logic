@@ -10,7 +10,7 @@ import de.fraunhofer.dataspaces.iese.camel.interceptor.model.IdsUseObject;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.UsageControlObject;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.service.UcService;
 import de.fraunhofer.iais.eis.Message;
-import it.eng.idsa.businesslogic.processor.consumer.ConsumerUcappProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerUsageControlProcessor;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
@@ -33,9 +33,9 @@ import org.springframework.stereotype.Component;
  */
 @ComponentScan("de.fraunhofer.dataspaces.iese")
 @Component
-public class ProducerUcappProcessor implements Processor {
+public class ProducerUsageControlProcessor implements Processor {
     private Gson gson;
-    private static final Logger logger = LoggerFactory.getLogger(ProducerUcappProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProducerUsageControlProcessor.class);
 
     @Value("${application.isEnabledUsageControl}")
     private boolean isEnabledUsageControl;
@@ -50,8 +50,8 @@ public class ProducerUcappProcessor implements Processor {
     private RejectionMessageService rejectionMessageService;
 
 
-    public ProducerUcappProcessor() {
-        gson = ConsumerUcappProcessor.createGson();
+    public ProducerUsageControlProcessor() {
+        gson = ConsumerUsageControlProcessor.createGson();
     }
 
     @Override
