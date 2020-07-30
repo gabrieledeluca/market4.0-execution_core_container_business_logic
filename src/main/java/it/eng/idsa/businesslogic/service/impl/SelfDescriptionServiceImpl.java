@@ -3,8 +3,6 @@ package it.eng.idsa.businesslogic.service.impl;
 
 import de.fraunhofer.iais.eis.*;
 import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
-import de.fraunhofer.iais.eis.serialize.BeanSerializerImpl;
-import de.fraunhofer.iais.eis.spi.BeanSerializer;
 import de.fraunhofer.iais.eis.util.ConstraintViolationException;
 import de.fraunhofer.iais.eis.util.PlainLiteral;
 import de.fraunhofer.iais.eis.util.Util;
@@ -60,8 +58,13 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 
     @Override
     public String getConnectorAsString() {
-        BeanSerializer ser = new BeanSerializerImpl();
-        String result = ser.toRdf(this.connector);
+        final Serializer serializer = new Serializer();
+        String result = null;
+        try {
+            result = serializer.serialize(this.connector);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return result;
     }
 
