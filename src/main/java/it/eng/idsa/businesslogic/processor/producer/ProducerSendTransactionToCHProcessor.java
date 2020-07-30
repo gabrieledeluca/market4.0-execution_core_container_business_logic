@@ -48,8 +48,8 @@ public class ProducerSendTransactionToCHProcessor implements Processor {
 		Map<String, Object> headers = exchange.getIn().getHeaders();
 		headers.remove("multipartMessageBody");
 		
-		exchange.getMessage().setHeaders(headers);
-		exchange.getMessage().setBody(exchange.getIn().getBody());
+		exchange.getOut().setHeaders(headers);
+		exchange.getOut().setBody(exchange.getIn().getBody());
 	}
 
 }

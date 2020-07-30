@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
@@ -56,13 +58,7 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		
 		if (eccHttpSendRouter.equals("http-header") && exchange.getIn().getHeader("headerBindingDone")!= null) {
 			String headerFromHeaders = getHeaderFromHeadersMap(exchange.getIn().getHeaders());
-			System.out.println(headerFromHeaders);
 			exchange.getIn().getHeaders().put("header", headerFromHeaders);
-			if (exchange.getIn().getHeader("payloadPart-1") != null) {
-				String payloadFromHeaders = getPayloadFromHeadersMap(exchange.getIn().getHeaders());
-				exchange.getIn().getHeaders().put("payload", payloadFromHeaders);
-				System.out.println(exchange.getIn().getHeader("payload").toString());
-			}
 		}
 		
 		if(!exchange.getIn().getHeaders().containsKey("header"))
@@ -114,18 +110,9 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		}
 	}
 
-	private String getPayloadFromHeadersMap(Map<String, Object> headers) {
-		StringBuffer sb = new StringBuffer();
-		
-		int i = 1;
-		while (headers.get("payloadPart-"+i) != null) {
-			sb.append(headers.get("payloadPart-"+i).toString());
-			i++;
-		}
-		return sb.toString();
-	}
 
-	private String getHeaderFromHeadersMap(Map<String, Object> headers) {
+	private String getHeaderFromHeadersMap(Map<String, Object> headers) throws JsonProcessingException {
+		
 		StringBuffer sb = new StringBuffer();
 
 		sb.append("{" + System.lineSeparator());
@@ -139,6 +126,8 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		sb.append("}");
 
 		return sb.toString();
+		
+		
 	}
 
 	private String appendKeyAndValue(String key, Map<String, Object> headersMap) {

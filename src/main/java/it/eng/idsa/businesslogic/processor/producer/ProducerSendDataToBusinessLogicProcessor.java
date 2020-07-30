@@ -29,6 +29,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import de.fhg.aisec.ids.comm.client.IdscpClient;
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.WebSocketClientConfiguration;
@@ -186,7 +190,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         	}
         	case "http-header":
         	{
-    			response =  this.forwardMessageHttpHeader(forwardTo, messageWithToken, payload, headerParts);
+    			response =  this.forwardMessageHttpHeader(forwardTo, messageWithToken, payload);
     			break;
     		}
         	default:
@@ -207,7 +211,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         	}
         	case "http-header":
         	{
-    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload, headerParts);
+    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload);
     			break;
     		}
         	default:
@@ -220,66 +224,36 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         return response;
     }
 
-    private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload, Map<String, Object> headerParts) {
+    private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) throws UnsupportedEncodingException, JsonMappingException, JsonProcessingException {
 		logger.info("Forwarding Message: Body: http-header");
 		
-		System.out.println(header);
-		System.out.println(payload);
-
-
+		ContentBody cbPayload = null;
+        if (payload != null) {
+            cbPayload = convertToContentBody(payload, ContentType.DEFAULT_TEXT, "payload");
+        }
+		
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
 		
-		// Set header and payload as http headers
+		// Set header as http headers
+		
+		Map<String, String> map = new ObjectMapper().readValue(header, Map.class);
+		
+		map.put("type", map.get("@type"));
+		map.put("id", map.get("@id"));
+		map.put("headerBindingDone", "true");
+		map.remove("@type");
+		map.remove("@id");
+		
+		map.forEach((key, value) ->
+			httpPost.addHeader(key, value)
+				);
 		
 		
-		headerParts.forEach((key, value) -> 
-			httpPost.addHeader(key, value.toString())
-		);
-		
-		String type = returnHeaderValue(header, "@type");
-		httpPost.addHeader("type", type);
-		String issued = returnHeaderValue(header, "issued");
-		httpPost.addHeader("issued", issued);
-		String issuerConnector = returnHeaderValue(header, "issuerConnector");
-		httpPost.addHeader("issuerConnector", issuerConnector);
-		String correlationMessage = returnHeaderValue(header, "correlationMessage");
-		httpPost.addHeader("correlationMessage", correlationMessage);
-		String transferContract = returnHeaderValue(header, "transferContract");
-		httpPost.addHeader("transferContract", transferContract);
-		String modelVersion = returnHeaderValue(header, "modelVersion");
-		httpPost.addHeader("modelVersion", modelVersion);
-		String id = returnHeaderValue(header, "@id");
-		httpPost.addHeader("id", id);
-		httpPost.addHeader("headerBindingDone", "true");
-		// TO-DO for DAPS
-//		if(header.contains("token")) {
-//			httpPost.addHeader("token", token);
-//		}
-		
-		// for payloads bigger then 8KB
-		if (payload.length() > 8192) {
-			int payloadParts = payload.length() / 8192;
-			if ((payload.length() % 8192) > 0) {
-				payloadParts++;
-			}
-			System.out.println(payloadParts);
-			int start = 0;
-			int partLength = payload.length() / payloadParts;
-			int end = payload.length() / payloadParts;
-			for (int i = 1; i < payloadParts; i++) {
-				httpPost.addHeader("payloadPart-"+i, payload.substring(start, end));
-				start = end + 1;
-				end = end + partLength;
-			}
-			if ((payload.length() % 8192) > 0) {
-				httpPost.addHeader("payloadPart-" + payloadParts, payload.substring(start, payload.length() - 1));
-			}
-		} else {
-			httpPost.addHeader("payload", payload);
+		if (payload != null) {
+			HttpEntity reqEntity = MultipartEntityBuilder.create().addPart("payload", cbPayload).build();
+			httpPost.setEntity(reqEntity);
 		}
-		System.out.println(payload);
-		
 		CloseableHttpResponse response;
 
 		try {
@@ -295,15 +269,6 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		}
 
 		return response;
-	}
-
-	private String returnHeaderValue(String header, String key) {
-		int keyIndex = header.lastIndexOf(key);
-		String rowStart = header.substring(keyIndex + 5 + key.length()); // space between the key and the value is 5
-		String rowEnd = "\"";
-		int end = rowStart.indexOf(rowEnd);
-		String value = rowStart.substring(0, end);
-		return value;
 	}
 
 	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws UnsupportedEncodingException {
@@ -416,8 +381,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
                 logger.info("Successful response: " + responseString);
                 // TODO:
                 // Set original body which is created using the original payload and header
-                exchange.getMessage().setHeader("multipartMessageBody", multipartMessageBody);
-                exchange.getMessage().setBody(responseString);
+                exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
+                exchange.getOut().setBody(responseString);
             }
         }
     }
@@ -434,8 +399,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
             logger.info("Successful response: " + responseString);
             // TODO:
             // Set original body which is created using the original payload and header 
-            exchange.getMessage().setHeader("multipartMessageBody", multipartMessageBody);
-            exchange.getMessage().setBody(responseString);
+            exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
+            exchange.getOut().setBody(responseString);
         }
     }
 
