@@ -33,7 +33,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
     String connectorURI;
     String resourceTitle;
     String resourceLang;
-    String resourceDesription;
+    String resourceDescription;
     Connector connector;
 
     @PostConstruct
@@ -71,7 +71,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
     private Resource getResource() {
         Resource offeredResource = (new ResourceBuilder())
                 ._title_(Util.asList(new PlainLiteral[]{new PlainLiteral(this.resourceTitle, this.resourceLang)}))
-                ._description_(Util.asList(new PlainLiteral[]{new PlainLiteral(this.resourceDesription, this.resourceLang)}))
+                ._description_(Util.asList(new PlainLiteral[]{new PlainLiteral(this.resourceDescription, this.resourceLang)}))
                 ._contractOffer_(getContractOffers())
                 .build();
         return offeredResource;
@@ -128,8 +128,8 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
     }
 
     @Value("${it.eng.idsa.service.resources.title?:'Execution Core Container}")
-    public void setResourceDesription(String resourceDesription) {
-        this.resourceDesription = resourceDesription;
+    public void setResourceDescription(String resourceDescription) {
+        this.resourceDescription = resourceDescription;
     }
 
     public static void main(String[] args) {

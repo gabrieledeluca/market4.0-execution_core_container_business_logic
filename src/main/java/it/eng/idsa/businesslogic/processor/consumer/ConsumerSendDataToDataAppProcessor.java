@@ -47,7 +47,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	@Value("${application.openDataAppReceiverRouter}")
 	private String openDataAppReceiverRouter;
 
-	@Value("${application.isEnabledUsageControl}")
+	@Value("${application.isEnabledUsageControl:false}")
 	private boolean isEnabledUsageControl;
 
 	@Autowired

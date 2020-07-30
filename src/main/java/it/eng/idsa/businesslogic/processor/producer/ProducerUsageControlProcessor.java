@@ -37,7 +37,7 @@ public class ProducerUsageControlProcessor implements Processor {
     private Gson gson;
     private static final Logger logger = LoggerFactory.getLogger(ProducerUsageControlProcessor.class);
 
-    @Value("${application.isEnabledUsageControl}")
+    @Value("${application.isEnabledUsageControl:false}")
     private boolean isEnabledUsageControl;
 
     @Autowired

@@ -46,7 +46,7 @@ public class ConsumerUsageControlProcessor implements Processor {
     private Message requestMessage;
     private Message responseMessage;
 
-    @Value("${application.isEnabledUsageControl}")
+    @Value("${application.isEnabledUsageControl:false}")
     private boolean isEnabledUsageControl;
 
     @Autowired
