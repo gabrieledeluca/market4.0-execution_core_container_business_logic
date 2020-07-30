@@ -5,13 +5,8 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.activation.DataHandler;
-
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
-import org.apache.camel.attachment.AttachmentMessage;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -29,7 +24,6 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
@@ -61,37 +55,20 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
-	
-	@Value("${application.idscp.isEnabled}")
-	private boolean isEnabledIdscp;
-	
-	@Value("${application.websocket.isEnabled}")
-	private boolean isEnabledWebSocket;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
+
+		Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
 		
-		String headerStr = null, payloadStr = null;
-		if(!isEnabledIdscp && !isEnabledWebSocket) {
-		   AttachmentMessage attMsg = exchange.getIn(AttachmentMessage.class);
-		   DataHandler headerDataHandler = attMsg.getAttachment("header");
-		   DataHandler payloadDataHandler = attMsg.getAttachment("payload");
-		   headerStr = IOUtils.toString(headerDataHandler.getInputStream(), "UTF-8");
-		   payloadStr = IOUtils.toString(payloadDataHandler.getInputStream(), "UTF-8");
-		} else {
-		   Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
-		   // Get header, payload and message
-		   headerStr = multipartMessageParts.get("header").toString();
-		   payloadStr = multipartMessageParts.get("payload").toString();
+
+		// Get header, payload and message
+		String header = filterHeader(multipartMessageParts.get("header").toString());
+		String payload = null;
+		if(multipartMessageParts.containsKey("payload")) {
+			payload = multipartMessageParts.get("payload").toString();
 		}
-		String header= filterHeader(headerStr);
-		String payload= null;
-		if(!StringUtils.isEmpty(payloadStr)) {
-			payload= payloadStr;
-		}
-		
-		
-		Message message = multipartMessageService.getMessage(headerStr);
+		Message message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
 
 		// Send data to the endpoint F for the Open API Data App
 		CloseableHttpResponse response = null;
@@ -122,6 +99,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		}	
 
 	}
+
 
 	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws ClientProtocolException, IOException {
 		logger.info("Forwarding Message: Body: binary");
@@ -190,6 +168,9 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 		return response;
 	}
+	
+	
+
 
 	private CloseableHttpClient getHttpClient() {
 		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
@@ -210,7 +191,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		ContentBody cbValue = new ByteArrayBody(valueBiteArray, contentType, valueName);
 		return cbValue;
 	}
-
+	
 	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String openApiDataAppAddress) throws UnsupportedOperationException, IOException {
 		if (response==null) {
 			logger.info("...communication error with: " + openApiDataAppAddress);
@@ -234,9 +215,9 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 				logger.info("Successful response: "+ responseString);
 				String	header = multipartMessageService.getHeaderContentString(responseString);
 				String payload = multipartMessageService.getPayloadContent(responseString);
-				exchange.getMessage().setHeader("header", header);
+				exchange.getOut().setHeader("header", header);
 				if(payload!=null) {
-					exchange.getMessage().setHeader("payload", payload);
+					exchange.getOut().setHeader("payload", payload);
 				}
 			}
 		}

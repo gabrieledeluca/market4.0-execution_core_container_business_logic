@@ -29,6 +29,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import de.fhg.aisec.ids.comm.client.IdscpClient;
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.WebSocketClientConfiguration;
@@ -165,7 +169,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     }
 
     private CloseableHttpResponse sendMultipartMessage(
-            Map<String, Object> headesParts,
+            Map<String, Object> headerParts,
             String messageWithToken,
             String header,
             String payload,
@@ -174,7 +178,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         CloseableHttpResponse response = null;
         Message message = multipartMessageService.getMessage(header);
         // -- Send message using HTTPS
-        if (Boolean.parseBoolean(headesParts.get("Is-Enabled-Daps-Interaction").toString())) {
+        if (Boolean.parseBoolean(headerParts.get("Is-Enabled-Daps-Interaction").toString())) {
         	switch(eccHttpSendRouter) {
         	case "mixed": {
         		response = this.forwardMessageBinary(forwardTo, messageWithToken, payload);
@@ -200,6 +204,11 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         		response = this.forwardMessageFormData(forwardTo, header, payload);
         		break;
         	}
+        	case "http-header":
+        	{
+    			response =  this.forwardMessageHttpHeader(forwardTo, header, payload);
+    			break;
+    		}
         	default:
         		logger.error("Applicaton property: application.eccHttpSendRouter is not properly set");
     			rejectionMessageService.sendRejectionMessage(
@@ -210,7 +219,54 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         return response;
     }
 
-    private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws UnsupportedEncodingException {
+    private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) throws UnsupportedEncodingException, JsonMappingException, JsonProcessingException {
+		logger.info("Forwarding Message: Body: http-header");
+		
+		ContentBody cbPayload = null;
+        if (payload != null) {
+            cbPayload = convertToContentBody(payload, ContentType.DEFAULT_TEXT, "payload");
+        }
+		
+		// Set F address
+		HttpPost httpPost = new HttpPost(address);
+		
+		// Set header as http headers
+		
+		Map<String, String> map = new ObjectMapper().readValue(header, Map.class);
+		
+		map.put("type", map.get("@type"));
+		map.put("id", map.get("@id"));
+		map.put("headerBindingDone", "true");
+		map.remove("@type");
+		map.remove("@id");
+		
+		map.forEach((key, value) ->
+			httpPost.addHeader(key, value)
+				);
+		
+		
+		if (payload != null) {
+			HttpEntity reqEntity = MultipartEntityBuilder.create().addPart("payload", cbPayload).build();
+			httpPost.setEntity(reqEntity);
+		}
+		CloseableHttpResponse response;
+
+		try {
+			response = getHttpClient().execute(httpPost);
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+
+		return response;
+	}
+
+	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws UnsupportedEncodingException {
         logger.info("Forwarding Message: Body: binary");
 
         // Covert to ContentBody
@@ -320,8 +376,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
                 logger.info("Successful response: " + responseString);
                 // TODO:
                 // Set original body which is created using the original payload and header
-                exchange.getMessage().setHeader("multipartMessageBody", multipartMessageBody);
-                exchange.getMessage().setBody(responseString);
+                exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
+                exchange.getOut().setBody(responseString);
             }
         }
     }
@@ -338,8 +394,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
             logger.info("Successful response: " + responseString);
             // TODO:
             // Set original body which is created using the original payload and header 
-            exchange.getMessage().setHeader("multipartMessageBody", multipartMessageBody);
-            exchange.getMessage().setBody(responseString);
+            exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
+            exchange.getOut().setBody(responseString);
         }
     }
 

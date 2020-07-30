@@ -3,17 +3,15 @@ package it.eng.idsa.businesslogic.processor.consumer;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.activation.DataHandler;
-
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
-import org.apache.camel.attachment.AttachmentMessage;
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
@@ -40,12 +38,8 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 	@Value("${application.isEnabledClearingHouse}")
 	private boolean isEnabledClearingHouse;
 	
-	@Value("${application.idscp.isEnabled}")
-	private boolean isEnabledIdscp;
-
-	@Value("${application.websocket.isEnabled}")
-	private boolean isEnabledWebSocket;
-
+	@Value("${application.eccHttpSendRouter}")
+	private String eccHttpSendRouter;
 
 	@Autowired
 	private MultipartMessageService multipartMessageService;
@@ -61,6 +55,11 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		Message message=null;
 		Map<String, Object> headesParts = new HashMap<String, Object>();
 		Map<String, Object> multipartMessageParts = new HashMap<String, Object>();
+		
+		if (eccHttpSendRouter.equals("http-header") && exchange.getIn().getHeader("headerBindingDone")!= null) {
+			String headerFromHeaders = getHeaderFromHeadersMap(exchange.getIn().getHeaders());
+			exchange.getIn().getHeaders().put("header", headerFromHeaders);
+		}
 		
 		if(!exchange.getIn().getHeaders().containsKey("header"))
 		{
@@ -84,18 +83,10 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 					header= multipartMessageService.getHeaderContentString(exchange.getIn().getHeader("header").toString());
 					multipartMessageParts.put("header", header);
 				} else {
-					if (!isEnabledIdscp && !isEnabledWebSocket && isEnabledDapsInteraction) {
-						AttachmentMessage attMsg = exchange.getIn(AttachmentMessage.class);
-						DataHandler headerDataHandler = attMsg.getAttachment("header");
-						//DataHandler payloadDataHandler = attMsg.getAttachment("payload");
-						header = IOUtils.toString(headerDataHandler.getInputStream(), "UTF-8");
-						//payload = IOUtils.toString(payloadDataHandler.getInputStream(), "UTF-8");
-					}else {
 					// Create multipart message with payload
 					header=exchange.getIn().getHeader("header").toString();
-					//payload=exchange.getIn().getHeader("payload").toString();
-					}
 					multipartMessageParts.put("header", header);
+					payload=exchange.getIn().getHeader("payload").toString();
 					multipartMessageParts.put("payload", payload);
 					message=multipartMessageService.getMessage(multipartMessageParts.get("header"));
 				}
@@ -107,8 +98,9 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 			}
 
 			// Return exchange
-			exchange.getMessage().setHeaders(headesParts);
-			exchange.getMessage().setBody(multipartMessageParts);
+			
+			exchange.getOut().setHeaders(headesParts);
+			exchange.getOut().setBody(multipartMessageParts);
 			
 		} catch (Exception e) {
 			logger.error("Error parsing multipart message:" + e);
@@ -116,6 +108,50 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 					RejectionMessageType.REJECTION_MESSAGE_COMMON, 
 					message);
 		}
+	}
+
+
+	private String getHeaderFromHeadersMap(Map<String, Object> headers) throws JsonProcessingException {
+		
+		StringBuffer sb = new StringBuffer();
+
+		sb.append("{" + System.lineSeparator());
+		sb.append(appendKeyAndValue("type", headers));
+		sb.append(appendKeyAndValue("issued", headers));
+		sb.append(appendKeyAndValue("issuerConnector", headers));
+		sb.append(appendKeyAndValue("correlationMessage", headers));
+		sb.append(appendKeyAndValue("transferContract", headers));
+		sb.append(appendKeyAndValue("modelVersion", headers));
+		sb.append(appendKeyAndValue("id", headers));
+		sb.append("}");
+
+		return sb.toString();
+		
+		
+	}
+
+	private String appendKeyAndValue(String key, Map<String, Object> headersMap) {
+		StringBuffer sb = new StringBuffer();
+		String lineStart = "  \"";
+		String lineEnd = "\",";
+		String spaceBetweenKeyAndValue = "\" : \"";
+		String value = headersMap.get(key).toString();
+		
+		sb.append(lineStart);
+		if (key.equals("type") || key.equals("id")) {
+			sb.append("@");
+		}
+		sb.append(key);
+		sb.append(spaceBetweenKeyAndValue);
+		sb.append(value);
+		if (!key.equals("id")) {
+			sb.append(lineEnd);
+		}else {
+			sb.append("\"");
+		}
+		sb.append(System.lineSeparator());
+		
+		return sb.toString();
 	}
 	
 }
