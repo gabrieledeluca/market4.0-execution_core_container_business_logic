@@ -35,6 +35,9 @@ public class CamelRouteProducer extends RouteBuilder {
 
 	@Autowired
 	ProducerParseReceivedDataProcessorBodyFormData parseReceivedDataProcessorBodyFormData;
+	
+//	@Autowired
+//	ProducerParseReceivedDataProcessorHttpHeader parseReceivedDataProcessorHttpHeader;
 
 	@Autowired
 	ProducerGetTokenFromDapsProcessor getTokenFromDapsProcessor;
@@ -141,35 +144,35 @@ public class CamelRouteProducer extends RouteBuilder {
                             .endChoice()
                     .endChoice();
             
-         // Camel SSL - Endpoint: A - Http-header
-            from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageHttpHeader")
-                    .process(parseReceivedDataProcessorBodyFormData)
-                    .choice()
-                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
-                            .process(getTokenFromDapsProcessor)
-    //						.process(sendToActiveMQ)
-    //						.process(receiveFromActiveMQ)
-                            // Send data to Endpoint B
-                            .process(sendDataToBusinessLogicProcessor)
-                            .process(parseReceivedResponseMessage)
-                            .process(validateTokenProcessor)
-                            .process(sendResponseToDataAppProcessor)
-                            .choice()
-                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
-                                    .process(sendTransactionToCHProcessor)
-                            .endChoice()
-                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
-        //					.process(sendToActiveMQ)
-        //					.process(receiveFromActiveMQ)
-                            // Send data to Endpoint B
-                            .process(sendDataToBusinessLogicProcessor)
-                            .process(parseReceivedResponseMessage)
-                            .process(sendResponseToDataAppProcessor)
-                            .choice()
-                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
-                                    .process(sendTransactionToCHProcessor)
-                            .endChoice()
-                    .endChoice();
+//         // Camel SSL - Endpoint: A - Http-header
+//            from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageHttpHeader")
+//                    .process(parseReceivedDataProcessorHttpHeader)
+//                    .choice()
+//                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
+//                            .process(getTokenFromDapsProcessor)
+//    //						.process(sendToActiveMQ)
+//    //						.process(receiveFromActiveMQ)
+//                            // Send data to Endpoint B
+//                            .process(sendDataToBusinessLogicProcessor)
+//                            .process(parseReceivedResponseMessage)
+//                            .process(validateTokenProcessor)
+//                            .process(sendResponseToDataAppProcessor)
+//                            .choice()
+//                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+//                                    .process(sendTransactionToCHProcessor)
+//                            .endChoice()
+//                        .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
+//        //					.process(sendToActiveMQ)
+//        //					.process(receiveFromActiveMQ)
+//                            // Send data to Endpoint B
+//                            .process(sendDataToBusinessLogicProcessor)
+//                            .process(parseReceivedResponseMessage)
+//                            .process(sendResponseToDataAppProcessor)
+//                            .choice()
+//                                .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
+//                                    .process(sendTransactionToCHProcessor)
+//                            .endChoice()
+//                    .endChoice();
             } else {
 				// End point A. Coomunication between Data App and ECC Producer.
 				from("timer://timerEndpointA?fixedRate=true&period=10s") //EndPoint A

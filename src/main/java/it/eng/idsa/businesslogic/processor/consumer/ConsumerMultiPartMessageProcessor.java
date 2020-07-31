@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.camel.util.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
@@ -57,8 +59,11 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		Map<String, Object> multipartMessageParts = new HashMap<String, Object>();
 		
 		if (eccHttpSendRouter.equals("http-header") && exchange.getIn().getHeader("headerBindingDone")!= null) {
-			String headerFromHeaders = getHeaderFromHeadersMap(exchange.getIn().getHeaders());
-			exchange.getIn().getHeaders().put("header", headerFromHeaders);
+			if (exchange.getIn().getHeader("headerBindingDone").toString().equals("false")) {
+				String headerFromHeaders = getHeaderFromHeadersMap(exchange.getIn().getHeaders());
+				exchange.getIn().getHeaders().put("header", headerFromHeaders);
+				exchange.getIn().getHeaders().replace("headerBindingDone", true);
+			}
 		}
 		
 		if(!exchange.getIn().getHeaders().containsKey("header"))
@@ -113,45 +118,41 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 
 	private String getHeaderFromHeadersMap(Map<String, Object> headers) throws JsonProcessingException {
 		
-		StringBuffer sb = new StringBuffer();
-
-		sb.append("{" + System.lineSeparator());
-		sb.append(appendKeyAndValue("type", headers));
-		sb.append(appendKeyAndValue("issued", headers));
-		sb.append(appendKeyAndValue("issuerConnector", headers));
-		sb.append(appendKeyAndValue("correlationMessage", headers));
-		sb.append(appendKeyAndValue("transferContract", headers));
-		sb.append(appendKeyAndValue("modelVersion", headers));
-		sb.append(appendKeyAndValue("id", headers));
-		sb.append("}");
-
-		return sb.toString();
+		Map<String, String> headerAsMap = new HashMap<String, String>();
+		headerAsMap.put("@type", headers.get("IDS-Messagetype").toString());
+		headerAsMap.put("@id", headers.get("IDS-Id").toString());
+		headerAsMap.put("issued", headers.get("IDS-Issued").toString());
+		headerAsMap.put("modelVersion", headers.get("IDS-ModelVersion").toString());
+		headerAsMap.put("issuerConnector", headers.get("IDS-IssuerConnector").toString());  
+		headerAsMap.put("transferContract", headers.get("IDS-TransferContract").toString()); 
+		headerAsMap.put("correlationMessage", headers.get("IDS-CorrelationMessage").toString());
+		
+		String header = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(headerAsMap);
+		
+		if (headers.containsKey("IDS-SecurityToken-Type")) {
+			Map<String, Object> tokenAsMap = new HashMap<String, Object>();
+			Map<String, String> tokenFormatAsMap = new HashMap<String, String>();
+			tokenAsMap.put("@type", headers.get("IDS-SecurityToken-Type").toString());
+			tokenAsMap.put("@id",headers.get("IDS-SecurityToken-Id").toString());
+			tokenFormatAsMap.put("@id", headers.get("IDS-SecurityToken-TokenFormat").toString());
+			tokenAsMap.put("tokenFormat", tokenFormatAsMap);
+			tokenAsMap.put("tokenValue", headers.get("IDS-SecurityToken-TokenValue").toString());
+			
+			String token = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(headerAsMap);
+			
+			System.out.println(token);
+			
+			JsonObject jsonHeader = new JsonObject(headerAsMap);
+			jsonHeader.put("authorizationToken", tokenAsMap);
+			
+			header = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(headerAsMap);
+			
+		}                                
+		
+		return header;
+		                                                                                             
 		
 		
 	}
 
-	private String appendKeyAndValue(String key, Map<String, Object> headersMap) {
-		StringBuffer sb = new StringBuffer();
-		String lineStart = "  \"";
-		String lineEnd = "\",";
-		String spaceBetweenKeyAndValue = "\" : \"";
-		String value = headersMap.get(key).toString();
-		
-		sb.append(lineStart);
-		if (key.equals("type") || key.equals("id")) {
-			sb.append("@");
-		}
-		sb.append(key);
-		sb.append(spaceBetweenKeyAndValue);
-		sb.append(value);
-		if (!key.equals("id")) {
-			sb.append(lineEnd);
-		}else {
-			sb.append("\"");
-		}
-		sb.append(System.lineSeparator());
-		
-		return sb.toString();
-	}
-	
 }

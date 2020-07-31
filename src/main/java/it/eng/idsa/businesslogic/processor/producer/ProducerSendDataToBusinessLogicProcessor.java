@@ -237,18 +237,32 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		
 		// Set header as http headers
 		
-		Map<String, String> map = new ObjectMapper().readValue(header, Map.class);
+		Map<String, String> messageAsMap = new ObjectMapper().readValue(header, Map.class);
 		
-		map.put("type", map.get("@type"));
-		map.put("id", map.get("@id"));
-		map.put("headerBindingDone", "true");
-		map.remove("@type");
-		map.remove("@id");
+		httpPost.addHeader("IDS-Messagetype", messageAsMap.get("@type"));
+		httpPost.addHeader("IDS-Id", messageAsMap.get("@id"));
+		httpPost.addHeader("IDS-Issued", messageAsMap.get("issued"));
+		httpPost.addHeader("IDS-ModelVersion", messageAsMap.get("modelVersion"));
+		httpPost.addHeader("IDS-IssuerConnector", messageAsMap.get("issuerConnector"));
+		httpPost.addHeader("IDS-TransferContract", messageAsMap.get("transferContract"));
+		httpPost.addHeader("IDS-CorrelationMessage", messageAsMap.get("correlationMessage"));
+		httpPost.addHeader("headerBindingDone", "false");
 		
-		map.forEach((key, value) ->
-			httpPost.addHeader(key, value)
-				);
 		
+		if (header.contains("authorizationToken")) {
+			
+//			Message message = multipartMessageService.getMessage(header);
+//			String messageAsString = new Serializer().serializePlainJson(message);
+//			System.out.println(token);
+			Map<String, String> tokenAsMap = new ObjectMapper().readValue(messageAsMap.get("authorizationToken").toString(), Map.class);
+			httpPost.addHeader("IDS-SecurityToken-Type", tokenAsMap.get("@type"));
+			httpPost.addHeader("IDS-SecurityToken-Id", tokenAsMap.get("@id"));
+			Map<String, String> tokenFormatAsMap = new ObjectMapper().readValue(tokenAsMap.get("tokenFormat").toString(), Map.class);
+			httpPost.addHeader("IDS-SecurityToken-TokenFormat", tokenAsMap.get("@id"));
+			httpPost.addHeader("IDS-SecurityToken-TokenValue", tokenAsMap.get("tokenValue"));
+			
+			
+		}
 		
 		if (payload != null) {
 			HttpEntity reqEntity = MultipartEntityBuilder.create().addPart("payload", cbPayload).build();
