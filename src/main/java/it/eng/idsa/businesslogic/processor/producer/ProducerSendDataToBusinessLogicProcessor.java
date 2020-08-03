@@ -237,29 +237,26 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		
 		// Set header as http headers
 		
-		Map<String, String> messageAsMap = new ObjectMapper().readValue(header, Map.class);
+		Map<String, Object> messageAsMap = new ObjectMapper().readValue(header, Map.class);
 		
-		httpPost.addHeader("IDS-Messagetype", messageAsMap.get("@type"));
-		httpPost.addHeader("IDS-Id", messageAsMap.get("@id"));
-		httpPost.addHeader("IDS-Issued", messageAsMap.get("issued"));
-		httpPost.addHeader("IDS-ModelVersion", messageAsMap.get("modelVersion"));
-		httpPost.addHeader("IDS-IssuerConnector", messageAsMap.get("issuerConnector"));
-		httpPost.addHeader("IDS-TransferContract", messageAsMap.get("transferContract"));
-		httpPost.addHeader("IDS-CorrelationMessage", messageAsMap.get("correlationMessage"));
+		httpPost.addHeader("IDS-Messagetype", messageAsMap.get("@type").toString());
+		httpPost.addHeader("IDS-Id", messageAsMap.get("@id").toString());
+		httpPost.addHeader("IDS-Issued", messageAsMap.get("issued").toString());
+		httpPost.addHeader("IDS-ModelVersion", messageAsMap.get("modelVersion").toString());
+		httpPost.addHeader("IDS-IssuerConnector", messageAsMap.get("issuerConnector").toString());
+		httpPost.addHeader("IDS-TransferContract", messageAsMap.get("transferContract").toString());
+		httpPost.addHeader("IDS-CorrelationMessage", messageAsMap.get("correlationMessage").toString());
 		httpPost.addHeader("headerBindingDone", "false");
 		
 		
 		if (header.contains("authorizationToken")) {
 			
-//			Message message = multipartMessageService.getMessage(header);
-//			String messageAsString = new Serializer().serializePlainJson(message);
-//			System.out.println(token);
-			Map<String, String> tokenAsMap = new ObjectMapper().readValue(messageAsMap.get("authorizationToken").toString(), Map.class);
-			httpPost.addHeader("IDS-SecurityToken-Type", tokenAsMap.get("@type"));
-			httpPost.addHeader("IDS-SecurityToken-Id", tokenAsMap.get("@id"));
-			Map<String, String> tokenFormatAsMap = new ObjectMapper().readValue(tokenAsMap.get("tokenFormat").toString(), Map.class);
-			httpPost.addHeader("IDS-SecurityToken-TokenFormat", tokenAsMap.get("@id"));
-			httpPost.addHeader("IDS-SecurityToken-TokenValue", tokenAsMap.get("tokenValue"));
+			Map<String, Object> tokenAsMap = (Map<String, Object>) messageAsMap.get("authorizationToken");	
+			httpPost.addHeader("IDS-SecurityToken-Type", tokenAsMap.get("@type").toString());
+			httpPost.addHeader("IDS-SecurityToken-Id", tokenAsMap.get("@id").toString());
+			Map<String, Object> tokenFormatAsMap = (Map<String, Object>) tokenAsMap.get("tokenFormat");
+			httpPost.addHeader("IDS-SecurityToken-TokenFormat", tokenAsMap.get("@id").toString());
+			httpPost.addHeader("IDS-SecurityToken-TokenValue", tokenAsMap.get("tokenValue").toString());
 			
 			
 		}
