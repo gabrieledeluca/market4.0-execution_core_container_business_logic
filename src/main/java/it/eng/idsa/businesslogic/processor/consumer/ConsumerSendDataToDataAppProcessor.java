@@ -83,6 +83,11 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 			response =  forwardMessageFormData(configuration.getOpenDataAppReceiver(), header, payload);
 			break;
 		}
+		case "http-header":
+		{
+			response =  forwardMessageHttpHeader(configuration.getOpenDataAppReceiver(), header, payload);
+			break;
+		}
 		default: {
 			logger.error("Applicaton property: application.openDataAppReceiverRouter is not properly set");
 			rejectionMessageService.sendRejectionMessage(
@@ -98,6 +103,12 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 			response.close();
 		}	
 
+	}
+
+
+	private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 
