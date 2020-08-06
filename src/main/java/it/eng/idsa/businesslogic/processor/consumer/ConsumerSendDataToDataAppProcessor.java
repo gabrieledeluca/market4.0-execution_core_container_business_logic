@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
@@ -106,9 +107,63 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	}
 
 
-	private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) {
-		// TODO Auto-generated method stub
-		return null;
+	private CloseableHttpResponse forwardMessageHttpHeader(String address, String header, String payload) throws UnsupportedEncodingException, JsonMappingException, JsonProcessingException {
+		logger.info("Forwarding Message: Body: http-header");
+		
+//	razmisli o tome koliko je ovo potrebno da se uradi
+		ContentBody cbPayload = null;
+        if (payload != null) {
+            cbPayload = convertToContentBody(payload, ContentType.DEFAULT_TEXT, "payload");
+        }
+		
+		// Set F address
+		HttpPost httpPost = new HttpPost(address);
+		
+		// Set header as http headers
+		
+		Map<String, Object> messageAsMap = new ObjectMapper().readValue(header, Map.class);
+		
+		httpPost.addHeader("IDS-Messagetype", messageAsMap.get("@type").toString());
+		httpPost.addHeader("IDS-Id", messageAsMap.get("@id").toString());
+		httpPost.addHeader("IDS-Issued", messageAsMap.get("issued").toString());
+		httpPost.addHeader("IDS-ModelVersion", messageAsMap.get("modelVersion").toString());
+		httpPost.addHeader("IDS-IssuerConnector", messageAsMap.get("issuerConnector").toString());
+		httpPost.addHeader("IDS-TransferContract", messageAsMap.get("transferContract").toString());
+		httpPost.addHeader("IDS-CorrelationMessage", messageAsMap.get("correlationMessage").toString());
+		httpPost.addHeader("headerBindingDone", "false");
+		
+		
+		if (header.contains("authorizationToken")) {
+			
+			Map<String, Object> tokenAsMap = (Map<String, Object>) messageAsMap.get("authorizationToken");	
+			httpPost.addHeader("IDS-SecurityToken-Type", tokenAsMap.get("@type").toString());
+			httpPost.addHeader("IDS-SecurityToken-Id", tokenAsMap.get("@id").toString());
+			Map<String, Object> tokenFormatAsMap = (Map<String, Object>) tokenAsMap.get("tokenFormat");
+			httpPost.addHeader("IDS-SecurityToken-TokenFormat", tokenAsMap.get("@id").toString());
+			httpPost.addHeader("IDS-SecurityToken-TokenValue", tokenAsMap.get("tokenValue").toString());
+			
+			
+		}
+		
+		if (payload != null) {
+			HttpEntity reqEntity = MultipartEntityBuilder.create().addPart("payload", cbPayload).build();
+			httpPost.setEntity(reqEntity);
+		}
+		CloseableHttpResponse response;
+
+		try {
+			response = getHttpClient().execute(httpPost);
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+
+		return response;
 	}
 
 
