@@ -319,6 +319,12 @@
 			<version>2.6</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15on</artifactId>
+			<version>1.63</version>
+		</dependency>
+
 		<!-- Usage Control -->
 
 		<dependency>
