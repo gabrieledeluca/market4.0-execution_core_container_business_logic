@@ -22,7 +22,7 @@
 		<camel.version>2.24.2</camel.version>
 		<camel.version.rc>3.0.0-RC3</camel.version.rc>
 		<tomcat.version>9.0.24</tomcat.version>
-		<information.model.version>2.1.0-SNAPSHOT</information.model.version>
+		<information.model.version>4.0.0</information.model.version>
 		<application.basedir>${basedir}</application.basedir>
 	</properties>
 

@@ -1,8 +1,17 @@
 package it.eng.idsa.businesslogic.service.impl;
 
 
-import java.io.IOException;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import de.fraunhofer.iais.eis.Message;
+import de.fraunhofer.iais.eis.Token;
+import de.fraunhofer.iais.eis.TokenBuilder;
+import de.fraunhofer.iais.eis.TokenFormat;
+import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.domain.MultipartMessage;
+import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.FormBodyPart;
@@ -19,18 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import de.fraunhofer.iais.eis.Message;
-import de.fraunhofer.iais.eis.Token;
-import de.fraunhofer.iais.eis.TokenBuilder;
-import de.fraunhofer.iais.eis.TokenFormat;
-import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
-import it.eng.idsa.businesslogic.service.MultipartMessageService;
-import it.eng.idsa.businesslogic.service.RejectionMessageService;
-import it.eng.idsa.businesslogic.util.RejectionMessageType;
-import it.eng.idsa.multipart.domain.MultipartMessage;
-import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
+import java.io.IOException;
 
 
 /**
@@ -50,7 +48,8 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 	
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
-	
+
+
 	@Override
 	public String getHeaderContentString(String body) {
 		MultipartMessage deserializedMultipartMessage = MultipartMessageProcessor.parseMultipartMessage(body);
@@ -78,18 +77,20 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 	public String addToken(Message message, String token) {
 		String output = null;
 		try {
-			String msgSerialized = new Serializer().serializePlainJson(message);
+			String msgSerialized = serializeMessage(message);
 			Token tokenJsonValue = new TokenBuilder()
 					._tokenFormat_(TokenFormat.JWT)
 					._tokenValue_(token).build();
-			String tokenValueSerialized=new Serializer().serializePlainJson(tokenJsonValue);
+			String tokenValueSerialized=serializeMessage(tokenJsonValue);
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
 			JSONObject jsonObjectToken = (JSONObject) parser.parse(tokenValueSerialized);
-			jsonObject.put("authorizationToken",jsonObjectToken);
-			output=new Serializer().serializePlainJson(jsonObject);
+			jsonObject.put("ids:authorizationToken",jsonObjectToken);
+			output=serializeMessage(jsonObject);
 		} catch (JsonProcessingException | ParseException e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return output;
@@ -99,13 +100,15 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 	public String removeToken(Message message) {
 		String output = null;
 		try {
-			String msgSerialized = new Serializer().serializePlainJson(message);
+			String msgSerialized = serializeMessage(message);
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
-			jsonObject.remove("authorizationToken");
-			output=new Serializer().serializePlainJson(jsonObject);
+			jsonObject.remove("ids:authorizationToken");
+			output=serializeMessage(jsonObject);
 		} catch (JsonProcessingException | ParseException e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return output;
@@ -193,17 +196,17 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 	public String getToken(Message message) throws JsonProcessingException {
 		String token = null;
 		try {
-			String msgSerialized = new Serializer().serializePlainJson(message);
+			String msgSerialized = serializeMessage(message);
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
-			jsonObject=(JSONObject) jsonObject.get("authorizationToken");
+			jsonObject=(JSONObject) jsonObject.get("ids:authorizationToken");
 			if(jsonObject == null) {
 				logger.error("Token is not set: authorizationToken is not set in the part of the header in the multipart message");
 				rejectionMessageService.sendRejectionMessage(
 						RejectionMessageType.REJECTION_TOKEN, 
 						message);
 			} else {
-				token= (String) jsonObject.get("tokenValue");
+				token= (String) jsonObject.get("ids:tokenValue");
 				if(token == null) {
 					logger.error("Token is not set: tokenValue is not set in the part of the header in the multipart message");
 					rejectionMessageService.sendRejectionMessage(
@@ -211,11 +214,15 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 							message);
 				}
 			}
-		} catch (ParseException e) {
+		} catch (ParseException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return token;
 	}
 
+	public static String serializeMessage(Object object) throws IOException {
+		String serializeToPlain = MultipartMessageProcessor.serializeToPlainJson(object);
+		return serializeToPlain;
+	}
 }
