@@ -62,7 +62,6 @@ public class ProducerUsageControlProcessor implements Processor {
             return;
         }
         Message message = null;
-        String responseMultipartMessageString = null;
         try {
             String multipartMessageBody = exchange.getIn().getBody().toString();
             String header = multipartMessageService.getHeaderContentString(multipartMessageBody);
@@ -104,12 +103,13 @@ public class ProducerUsageControlProcessor implements Processor {
                             .withHeaderContent(header)
                             .withPayloadContent(extractPayloadFromJson(ucObj.getPayload()))
                             .build();
-                    responseMultipartMessageString = MultipartMessageProcessor.
+                    String responseMultipartMessageString = MultipartMessageProcessor.
                             multipartMessagetoString(multipartMessage, false);
+                    exchange.getIn().setBody(responseMultipartMessageString);
                 }
             }
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
-            exchange.getOut().setBody(responseMultipartMessageString);
+            exchange.getOut().setBody(exchange.getIn().getBody());
         } catch (Exception e) {
             logger.error("Usage Control Enforcement has failed with MESSAGE: " + e.getMessage());
             rejectionMessageService.sendRejectionMessage(

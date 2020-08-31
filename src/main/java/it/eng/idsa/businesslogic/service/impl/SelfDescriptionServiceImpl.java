@@ -41,10 +41,8 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
         this.connector = (new BaseConnectorBuilder(new URI(this.connectorURI)))
                 ._maintainer_(new URI(this.companyURI))
                 ._curator_(new URI(this.companyURI))
-                ._resourceCatalog_(this.getCatalog()) //  Infomodel version 4.0.0
-                ._securityProfile_(SecurityProfile.BASE_SECURITY_PROFILE) //  Infomodel version 4.0.0
-                //._catalog_(this.getCatalog()) // Infomodel version 2.1.0-SNAPSHOT
-                //._securityProfile_(SecurityProfile.BASE_CONNECTOR_SECURITY_PROFILE) //  Infomodel version 2.1.0-SNAPSHOT
+                ._catalog_(this.getCatalog())
+                ._securityProfile_(SecurityProfile.BASE_CONNECTOR_SECURITY_PROFILE)
                 ._inboundModelVersion_(Util.asList(new String[]{this.infoModelVersion}))
                 ._outboundModelVersion_(this.infoModelVersion)
                 .build();
@@ -95,27 +93,16 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
         }
         return null;
     }
-    // Infomodel version 4.0.0
-    private java.util.ArrayList<ResourceCatalog> getCatalog() {
-        ResourceCatalog catalog = (new ResourceCatalogBuilder()
-                ._offeredResource_(Util.asList(new Resource[]{this.getResource()}))
-                .build());
-        java.util.ArrayList<ResourceCatalog> catalogList = new ArrayList();
-        catalogList.add(catalog);
-        return catalogList;
-    }
 
-    // Infomodel version 2.1.0-SNAPSHOT
-    /*private Catalog getCatalog() {
+    private Catalog getCatalog() {
         Catalog catalog = (new CatalogBuilder())
                 ._offer_(Util.asList(new Resource[]{this.getResource()}))
                 .build();
         return catalog;
     }
-     */
 
     //TODO Add Properties
-    @Value("${it.eng.idsa.service.infomodel.version ?:4.0.0}")
+    @Value("${it.eng.idsa.service.infomodel.version ?:2.1.0-SNAPSHOT}")
     public void setInfoModelVersion(String infoModelVersion) {
         this.infoModelVersion = infoModelVersion;
     }

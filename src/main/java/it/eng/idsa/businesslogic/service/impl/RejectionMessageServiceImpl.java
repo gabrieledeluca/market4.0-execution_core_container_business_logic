@@ -81,7 +81,7 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 		return rejectionMessage;
 	}
 
-	private String getInformationModelVersion() {
+	/*private String getInformationModelVersion() {
 		String currentInformationModelVersion = null;
 		try {
 
@@ -108,11 +108,11 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 		}
 
 		return currentInformationModelVersion;
-	}
-
-	/*private String getInformationModelVersion() {
-		return "2.1.0-SNAPSHOT";
 	}*/
+
+	private String getInformationModelVersion() {
+		return "2.1.0-SNAPSHOT";
+	}
 
 	public void setInformationModelVersion(String informationModelVersion) {
 		this.informationModelVersion = informationModelVersion;

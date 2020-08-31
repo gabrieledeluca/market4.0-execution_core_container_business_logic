@@ -3,14 +3,17 @@
  */
 package it.eng.idsa.businesslogic.service.impl;
 
-import de.fraunhofer.iais.eis.LogMessage;
-import de.fraunhofer.iais.eis.LogMessageBuilder;
-import de.fraunhofer.iais.eis.Message;
-import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
-import it.eng.idsa.businesslogic.service.ClearingHouseService;
-import it.eng.idsa.businesslogic.service.HashFileService;
-import it.eng.idsa.clearinghouse.model.Body;
-import it.eng.idsa.clearinghouse.model.NotificationContent;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.GregorianCalendar;
+import java.util.Properties;
+import java.util.UUID;
+
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.maven.model.Model;
@@ -26,15 +29,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.GregorianCalendar;
-import java.util.Properties;
-import java.util.UUID;
+import de.fraunhofer.iais.eis.LogNotification;
+import de.fraunhofer.iais.eis.LogNotificationBuilder;
+import de.fraunhofer.iais.eis.Message;
+import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
+import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
+import it.eng.idsa.businesslogic.service.ClearingHouseService;
+import it.eng.idsa.businesslogic.service.HashFileService;
+import it.eng.idsa.clearinghouse.model.Body;
+import it.eng.idsa.clearinghouse.model.NotificationContent;
 
 
 /**
@@ -79,22 +82,14 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 					.newXMLGregorianCalendar(gcal);
 			ArrayList<URI> recipientConnectors = new ArrayList<URI>();
 			recipientConnectors.add(connectorURI);
-
-			// Infomodel version 4.0.0
-			LogMessage logInfo=new LogMessageBuilder()
-				 ._modelVersion_(informationModelVersion)
-				 ._issuerConnector_(whoIAm())
-				 ._issued_(xgcal) .build();
-
-			// Infomodel version 2.1.0-SNAPSHOT
-			/*LogNotification logInfo=new LogNotificationBuilder()
-				._modelVersion_(informationModelVersion)
-				._issuerConnector_(whoIAm())
-				._issued_(xgcal) .build();
-			 */
+			
+			LogNotification logNotification=new LogNotificationBuilder()
+			 ._modelVersion_(informationModelVersion) 
+			 ._issuerConnector_(whoIAm())
+			 ._issued_(xgcal) .build();
 			
 			NotificationContent notificationContent=new NotificationContent();
-			notificationContent.setHeader(logInfo);
+			notificationContent.setHeader(logNotification);
 			Body body=new Body();
 			body.setHeader(correlatedMessage);
 			String hash = hashService.hash(payload);
@@ -104,7 +99,7 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 			
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_JSON);
-			String msgSerialized = MultipartMessageServiceImpl.serializeMessage(notificationContent);
+			String msgSerialized = new Serializer().serializePlainJson(notificationContent);
 			logger.info("msgSerialized to CH="+msgSerialized);
 			JsonObject jsonObject = (JsonObject) Jsoner.deserialize(msgSerialized);
 
@@ -115,7 +110,7 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 			
 			logger.info("Sending Data to the Clearing House "+endpoint+" ...");
 			restTemplate.postForObject(endpoint, entity, String.class);
-			logger.info("Data [LogNotitication.id="+logInfo.getId()+"] sent to the Clearing House "+endpoint);
+			logger.info("Data [LogNotitication.id="+logNotification.getId()+"] sent to the Clearing House "+endpoint);
 			hashService.recordHash(hash, payload, notificationContent);
 
 		}catch(Exception e) {
