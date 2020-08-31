@@ -77,11 +77,13 @@ public class ConsumerUsageControlProcessor implements Processor {
             ArtifactRequestMessage artifactRequestMessage = null;
             if(null == requestMessage || null == responseMessage)
                 throw new Exception("Request or Response messages are empty.");
+            /* TODO
             if (requestMessage instanceof  ArtifactRequestMessage
                     && !(responseMessage instanceof ArtifactResponseMessage)
                     && !(responseMessage instanceof RejectionMessage)) {
                 throw new Exception("Response Header Type is not compatible with Usage Control Required.");
             }
+             */
             try {
                 artifactRequestMessage = (ArtifactRequestMessage) requestMessage;
             } catch (Exception e) {

@@ -1,19 +1,16 @@
 /**
- * 
+ *
  */
 package it.eng.idsa.businesslogic.service.impl;
 
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.GregorianCalendar;
-import java.util.Properties;
-import java.util.UUID;
-
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
-
+import de.fraunhofer.iais.eis.LogMessage;
+import de.fraunhofer.iais.eis.LogMessageBuilder;
+import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
+import it.eng.idsa.businesslogic.service.ClearingHouseService;
+import it.eng.idsa.businesslogic.service.HashFileService;
+import it.eng.idsa.clearinghouse.model.Body;
+import it.eng.idsa.clearinghouse.model.NotificationContent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.maven.model.Model;
@@ -29,15 +26,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import de.fraunhofer.iais.eis.LogNotification;
-import de.fraunhofer.iais.eis.LogNotificationBuilder;
-import de.fraunhofer.iais.eis.Message;
-import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
-import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
-import it.eng.idsa.businesslogic.service.ClearingHouseService;
-import it.eng.idsa.businesslogic.service.HashFileService;
-import it.eng.idsa.clearinghouse.model.Body;
-import it.eng.idsa.clearinghouse.model.NotificationContent;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.GregorianCalendar;
+import java.util.Properties;
+import java.util.UUID;
 
 
 /**
@@ -55,7 +52,7 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 	private final static String informationModelVersion = getInformationModelVersion();
 
 	private static URI connectorURI;
-	
+
 	@Autowired
 	private HashFileService hashService;
 
@@ -82,24 +79,32 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 					.newXMLGregorianCalendar(gcal);
 			ArrayList<URI> recipientConnectors = new ArrayList<URI>();
 			recipientConnectors.add(connectorURI);
-			
-			LogNotification logNotification=new LogNotificationBuilder()
-			 ._modelVersion_(informationModelVersion) 
-			 ._issuerConnector_(whoIAm())
-			 ._issued_(xgcal) .build();
-			
+
+			// Infomodel version 4.0.0
+			LogMessage logInfo=new LogMessageBuilder()
+					._modelVersion_(informationModelVersion)
+					._issuerConnector_(whoIAm())
+					._issued_(xgcal) .build();
+
+			// Infomodel version 2.1.0-SNAPSHOT
+			/*LogNotification logInfo=new LogNotificationBuilder()
+				._modelVersion_(informationModelVersion)
+				._issuerConnector_(whoIAm())
+				._issued_(xgcal) .build();
+			 */
+
 			NotificationContent notificationContent=new NotificationContent();
-			notificationContent.setHeader(logNotification);
+			notificationContent.setHeader(logInfo);
 			Body body=new Body();
 			body.setHeader(correlatedMessage);
 			String hash = hashService.hash(payload);
 			body.setPayload(hash);
 
 			notificationContent.setBody(body);
-			
+
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_JSON);
-			String msgSerialized = new Serializer().serializePlainJson(notificationContent);
+			String msgSerialized = MultipartMessageServiceImpl.serializeMessage(notificationContent);
 			logger.info("msgSerialized to CH="+msgSerialized);
 			JsonObject jsonObject = (JsonObject) Jsoner.deserialize(msgSerialized);
 
@@ -107,10 +112,10 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 			//JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
 
 			HttpEntity<JsonObject> entity = new HttpEntity<>(jsonObject, headers);
-			
+
 			logger.info("Sending Data to the Clearing House "+endpoint+" ...");
 			restTemplate.postForObject(endpoint, entity, String.class);
-			logger.info("Data [LogNotitication.id="+logNotification.getId()+"] sent to the Clearing House "+endpoint);
+			logger.info("Data [LogNotitication.id="+logInfo.getId()+"] sent to the Clearing House "+endpoint);
 			hashService.recordHash(hash, payload, notificationContent);
 
 		}catch(Exception e) {
@@ -121,12 +126,12 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 	private static String getInformationModelVersion() {
 		String currnetInformationModelVersion = null;
 		try {
-	
+
 			InputStream is = RejectionMessageServiceImpl.class.getClassLoader().getResourceAsStream("META-INF/maven/it.eng.idsa/market4.0-execution_core_container_business_logic/pom.xml");
 			MavenXpp3Reader reader = new MavenXpp3Reader();
 			Model model = reader.read(is);
 			MavenProject project = new MavenProject(model);
-			Properties props = project.getProperties(); 
+			Properties props = project.getProperties();
 			if (props.get("information.model.version")!=null) {
 				return props.get("information.model.version").toString();
 			}
@@ -145,7 +150,7 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 		}
 		return currnetInformationModelVersion;
 	}
-	
+
 	private URI whoIAm() {
 		//TODO 
 		return URI.create("auto-generated");
