@@ -163,7 +163,6 @@ public class CamelRouteProducer extends RouteBuilder {
 										// Send data to Endpoint B
 										.process(sendDataToBusinessLogicProcessor)
 										.process(parseReceivedResponseMessage)
-										//.process(sendResponseToDataAppProcessor)
 										.process(sendResponseToDataAppProcessor)
 										.process(producerUsageControlProcessor)
 								.choice()

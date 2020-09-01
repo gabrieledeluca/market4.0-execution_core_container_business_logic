@@ -10,7 +10,9 @@ import de.fraunhofer.dataspaces.iese.camel.interceptor.model.IdsUseObject;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.UsageControlObject;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.service.UcService;
 import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationA;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerUsageControlProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
@@ -49,6 +51,11 @@ public class ProducerUsageControlProcessor implements Processor {
     @Autowired
     private RejectionMessageService rejectionMessageService;
 
+    @Value("${application.dataApp.websocket.isEnabled}")
+    private boolean isEnabledWebSocket;
+
+    @Autowired(required = false)
+    WebSocketServerConfigurationA webSocketServerConfiguration;
 
     public ProducerUsageControlProcessor() {
         gson = ConsumerUsageControlProcessor.createGson();
@@ -107,6 +114,10 @@ public class ProducerUsageControlProcessor implements Processor {
                     responseMultipartMessageString = MultipartMessageProcessor.
                             multipartMessagetoString(multipartMessage, false);
                 }
+            }
+            if(isEnabledWebSocket) {
+                ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration.responseMessageBufferWebSocket();
+                responseMessageServerBean.add(responseMultipartMessageString.getBytes());
             }
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setBody(responseMultipartMessageString);

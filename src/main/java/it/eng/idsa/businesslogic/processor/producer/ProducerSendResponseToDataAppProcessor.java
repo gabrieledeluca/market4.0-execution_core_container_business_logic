@@ -38,6 +38,9 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 	@Value("${application.dataApp.websocket.isEnabled}")
 	private boolean isEnabledWebSocket;
 
+	@Value("${application.isEnabledUsageControl:false}")
+	private boolean isEnabledUsageControl;
+
 	@Autowired(required = false)
 	WebSocketServerConfigurationA webSocketServerConfiguration;
 
@@ -83,7 +86,7 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 		}
 
 		// TODO: Send The MultipartMessage message to the WebSocket
-		if(isEnabledWebSocket) {
+		if(isEnabledWebSocket && !isEnabledUsageControl) {
 			ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration.responseMessageBufferWebSocket();
 			responseMessageServerBean.add(responseMultipartMessageString.getBytes());
 		}
