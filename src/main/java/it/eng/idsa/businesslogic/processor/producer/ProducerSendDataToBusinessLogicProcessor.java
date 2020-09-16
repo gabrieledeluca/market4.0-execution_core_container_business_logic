@@ -63,7 +63,10 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     private boolean isEnabledWebSocket;
     
     @Value("${application.eccHttpSendRouter}")
-    private String eccHttpSendRouter;  
+    private String eccHttpSendRouter;
+
+    @Value("${camel.component.jetty.use-global-ssl-context-parameters}")
+    private boolean isJettySSLEnabled;
 
     @Autowired
     private MultipartMessageService multipartMessageService;
@@ -286,7 +289,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     private CloseableHttpClient getHttpClient() {
         AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
 
-        CloseableHttpClient httpClient = HttpClientGenerator.get(config);
+        CloseableHttpClient httpClient = HttpClientGenerator.get(config, isJettySSLEnabled);
         logger.warn("Created Accept-All Http Client");
 
         return httpClient;

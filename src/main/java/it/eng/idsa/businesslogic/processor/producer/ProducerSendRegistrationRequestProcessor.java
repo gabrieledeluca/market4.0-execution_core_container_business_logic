@@ -111,7 +111,7 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 	private CloseableHttpClient getHttpClient() {
 		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
 
-		CloseableHttpClient httpClient = HttpClientGenerator.get(config);
+		CloseableHttpClient httpClient = HttpClientGenerator.get(config, true);
 		logger.warn("Created Accept-All Http Client");
 
 		return httpClient;

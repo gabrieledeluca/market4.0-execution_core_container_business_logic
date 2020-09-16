@@ -1,5 +1,48 @@
 package it.eng.idsa.businesslogic.service.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.RSAPublicKeySpec;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.json.simple.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -13,36 +56,17 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+
 import it.eng.idsa.businesslogic.service.DapsService;
 import it.eng.idsa.businesslogic.util.ProxyAuthenticator;
-import okhttp3.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.json.simple.JSONObject;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import javax.net.ssl.*;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.*;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPublicKeySpec;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import okhttp3.Authenticator;
+import okhttp3.Credentials;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.Route;
 
 /**
  * @author Milan Karajovic and Gabriele De Luca
@@ -113,7 +137,7 @@ public class DapsOrbiterServiceImpl implements DapsService {
             logger.info("Loading trust store: " + keyStoreName);
             keystore.load(jksKeyStoreInputStream, keyStorePassword.toCharArray());
             trustManagerKeyStore.load(jksTrustStoreInputStream, keyStorePassword.toCharArray());
-            Certificate[] certs = trustManagerKeyStore.getCertificateChain("ca");
+            java.security.cert.Certificate[] certs = trustManagerKeyStore.getCertificateChain("ca");
             logger.info("Cert chain: " + Arrays.toString(certs));
 
             logger.info("LOADED CA CERT: " + trustManagerKeyStore.getCertificate("ca"));
@@ -154,24 +178,24 @@ public class DapsOrbiterServiceImpl implements DapsService {
             final TrustManager[] trustAllCerts = new TrustManager[]{
                     new X509TrustManager() {
                         @Override
-                        public void checkClientTrusted(X509Certificate[] chain,
+                        public void checkClientTrusted(java.security.cert.X509Certificate[] chain,
                                                        String authType) throws CertificateException {
                         }
 
                         @Override
-                        public void checkServerTrusted(X509Certificate[] chain,
+                        public void checkServerTrusted(java.security.cert.X509Certificate[] chain,
                                                        String authType) throws CertificateException {
                         }
 
                         @Override
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return new X509Certificate[0];
+                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                            return new java.security.cert.X509Certificate[0];
                         }
                     }
             };
             // Install the all-trusting trust manager
             final SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, trustAllCerts, new SecureRandom());
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
             // Create an ssl socket factory with our all-trusting manager
             final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
             if (!proxyUser.equalsIgnoreCase("")) {
@@ -207,17 +231,14 @@ public class DapsOrbiterServiceImpl implements DapsService {
             ASN1OctetString akiOc = ASN1OctetString.getInstance(rawAuthorityKeyIdentifier);
             AuthorityKeyIdentifier aki = AuthorityKeyIdentifier.getInstance(akiOc.getOctets());
             byte[] authorityKeyIdentifier = aki.getKeyIdentifier();
-
             //GET SKI
             String ski_oid = Extension.subjectKeyIdentifier.getId();
             byte[] rawSubjectKeyIdentifier = cert.getExtensionValue(ski_oid);
             ASN1OctetString ski0c = ASN1OctetString.getInstance(rawSubjectKeyIdentifier);
             SubjectKeyIdentifier ski = SubjectKeyIdentifier.getInstance(ski0c.getOctets());
             byte[] subjectKeyIdentifier = ski.getKeyIdentifier();
-
             String aki_result = beatifyHex(encodeHexString(authorityKeyIdentifier).toUpperCase());
             String ski_result = beatifyHex(encodeHexString(subjectKeyIdentifier).toUpperCase());
-
             String connectorUUID = ski_result + "keyid:" + aki_result.substring(0, aki_result.length() - 1);
             */
             logger.info("ConnectorUUID: " + connectorUUID);

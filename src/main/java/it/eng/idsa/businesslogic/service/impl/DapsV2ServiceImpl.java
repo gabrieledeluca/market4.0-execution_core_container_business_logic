@@ -1,5 +1,48 @@
 package it.eng.idsa.businesslogic.service.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.Key;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -13,41 +56,21 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+
 import de.fhg.aisec.ids.api.settings.Settings;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import it.eng.idsa.businesslogic.service.DapsService;
 import it.eng.idsa.businesslogic.util.ProxyAuthenticator;
-import okhttp3.*;
-import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import javax.net.ssl.*;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.*;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import okhttp3.Authenticator;
+import okhttp3.Credentials;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.Route;
 
 
 /**
@@ -148,24 +171,24 @@ public class DapsV2ServiceImpl implements DapsService {
             final TrustManager[] trustAllCerts = new TrustManager[]{
                     new X509TrustManager() {
                         @Override
-                        public void checkClientTrusted(X509Certificate[] chain,
+                        public void checkClientTrusted(java.security.cert.X509Certificate[] chain,
                                                        String authType) throws CertificateException {
                         }
 
                         @Override
-                        public void checkServerTrusted(X509Certificate[] chain,
+                        public void checkServerTrusted(java.security.cert.X509Certificate[] chain,
                                                        String authType) throws CertificateException {
                         }
 
                         @Override
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return new X509Certificate[0];
+                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                            return new java.security.cert.X509Certificate[0];
                         }
                     }
             };
             // Install the all-trusting trust manager
             final SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, trustAllCerts, new SecureRandom());
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
             // Create an ssl socket factory with our all-trusting manager
             final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
             if (!proxyUser.equalsIgnoreCase("")) {
@@ -308,7 +331,6 @@ public class DapsV2ServiceImpl implements DapsService {
         if (sslSocketFactory == null) {
             throw new JwtException("SSLSocketFactory is null, acquireToken() must be called first!");
         }
-
         try {
             // The HttpsJwks retrieves and caches keys from a the given HTTPS JWKS endpoint.
             // Because it retains the JWKs after fetching them, it can and should be reused
@@ -317,13 +339,11 @@ public class DapsV2ServiceImpl implements DapsService {
             Get getInstance = new Get();
             getInstance.setSslSocketFactory(sslSocketFactory);
             httpsJkws.setSimpleHttpGet(getInstance);
-
             // The HttpsJwksVerificationKeyResolver uses JWKs obtained from the HttpsJwks and will select
             // the most appropriate one to use for verification based on the Key ID and other factors
             // provided in the header of the JWS/JWT.
             HttpsJwksVerificationKeyResolver httpsJwksKeyResolver =
                     new HttpsJwksVerificationKeyResolver(httpsJkws);
-
             // Use JwtConsumerBuilder to construct an appropriate JwtConsumer, which will
             // be used to validate and process the JWT.
             // The specific validation requirements for a JWT are context dependent, however,
@@ -349,21 +369,17 @@ public class DapsV2ServiceImpl implements DapsService {
                                                     .WHITELIST, // which is only RS256 here
                                             AlgorithmIdentifiers.RSA_USING_SHA256))
                             .build(); // create the JwtConsumer instance
-
             LOG.info("Verifying JWT...");
             //  Validate the JWT and process it to the Claims
             JwtClaims jwtClaims = jwtConsumer.processToClaims(dynamicAttributeToken);
             LOG.info("JWT validation succeeded! " + jwtClaims);
-
             return jwtClaims.getClaimsMap();
         } catch (InvalidJwtException e) {
             // InvalidJwtException will be thrown, if the JWT failed processing or validation in anyway.
             // Hopefully with meaningful explanations(s) about what went wrong.
             LOG.warn("Invalid JWT!", e);
-
             // Programmatic access to (some) specific reasons for JWT invalidity is also possible
             // should you want different error handling behavior for certain conditions.
-
             // Whether or not the JWT has expired being one common reason for invalidity
             if (e.hasExpired()) {
                 try {
@@ -372,7 +388,6 @@ public class DapsV2ServiceImpl implements DapsService {
                     LOG.error("Malformed claim encountered", e1);
                 }
             }
-
             // Or maybe the audience was invalid
             if (e.hasErrorCode(ErrorCodes.AUDIENCE_INVALID)) {
                 try {
@@ -381,7 +396,6 @@ public class DapsV2ServiceImpl implements DapsService {
                     LOG.error("Malformed claim encountered", e1);
                 }
             }
-
             throw e;
         }
     }*/

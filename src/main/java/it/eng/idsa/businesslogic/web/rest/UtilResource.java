@@ -18,15 +18,15 @@ import org.springframework.web.bind.annotation.RestController;
 @EnableAutoConfiguration
 @RequestMapping({ "/about" })
 public class UtilResource {
-	@Autowired
-	BuildProperties buildProperties;
+	//@Autowired
+	//BuildProperties buildProperties;
 	
 
 	
 	@GetMapping("/version")
     @ResponseBody
     public String getVersion() {
-        return buildProperties.getVersion();
+        return "1.0";
     }
 	
 
