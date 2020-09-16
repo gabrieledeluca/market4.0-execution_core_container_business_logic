@@ -68,6 +68,15 @@ public class CamelRouteProducer extends RouteBuilder {
 
 	@Autowired
 	CamelContext camelContext;
+	
+	@Autowired
+	private ProducerCreateRegistrationMessageProcessor createRegitratioMessageProducer;
+	
+	@Autowired
+	private ProducerSendRegistrationRequestProcessor sendRegistrationRequestProcessor;
+	
+	@Autowired
+	private ProducerProcessRegistrationResponseProcessor processRegistrationResponseProducer;
 
 	@Value("${application.dataApp.websocket.isEnabled}")
 	private boolean isEnabledDataAppWebSocket;
@@ -82,6 +91,11 @@ public class CamelRouteProducer extends RouteBuilder {
 		onException(ExceptionForProcessor.class, RuntimeException.class)
 			.handled(true)
 			.process(processorException);
+		
+		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration")
+			.process(createRegitratioMessageProducer)
+            .process(sendRegistrationRequestProcessor)
+			.process(processRegistrationResponseProducer);
 
 		if(!isEnabledDataAppWebSocket) {
             // Camel SSL - Endpoint: A - Body binary

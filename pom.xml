@@ -33,6 +33,7 @@
 			<url>http://maven.iais.fraunhofer.de/artifactory/eis-ids-public</url>
 		</repository>
 	</repositories>
+	
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
@@ -46,19 +47,19 @@
 			<version>2.2.1</version>
 		</dependency>
 		<!-- H2 database -->
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-		</dependency>
+<!-- 		<dependency> -->
+<!-- 			<groupId>com.h2database</groupId> -->
+<!-- 			<artifactId>h2</artifactId> -->
+<!-- 		</dependency> -->
 		<!-- Spring Boot - common dependencies -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
+<!-- 		<dependency> -->
+<!-- 			<groupId>org.springframework.boot</groupId> -->
+<!-- 			<artifactId>spring-boot-starter-data-jpa</artifactId> -->
+<!-- 		</dependency> -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
@@ -104,6 +105,12 @@
 			<groupId>it.eng.idsa</groupId>
 			<artifactId>multipart-message-processor</artifactId>
 			<version>1.0-SNAPSHOT</version>
+			<exclusions>
+				<exclusion>
+					<groupId>de.fraunhofer.iais.eis.ids.infomodel</groupId>
+					<artifactId>java</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- CLEARING HOUSE -->
@@ -332,9 +339,18 @@
 			<artifactId>camel-interceptor-ucapp</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
-
 		<!-- Usage Control -->
-
+		
+		<dependency>
+		  <groupId>org.mockito</groupId>
+		  <artifactId>mockito-core</artifactId>
+		  <scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>org.mockito</groupId>
+		    <artifactId>mockito-junit-jupiter</artifactId>
+		    <scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
