@@ -39,6 +39,9 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 	@Value("${application.dataApp.websocket.isEnabled}")
 	private boolean isEnabledWebSocket;
 
+	@Value("${application.isEnabledUsageControl:false}")
+	private boolean isEnabledUsageControl;
+
 	@Autowired(required = false)
 	WebSocketServerConfigurationA webSocketServerConfiguration;
 
@@ -65,25 +68,24 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 		}
 
 		// Prepare response
-		MultipartMessage multipartMessage = new MultipartMessageBuilder().withHeaderContent(header)
-				.withPayloadContent(payload).build();
-		String responseMultipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage,
-				false);
+		MultipartMessage multipartMessage = new MultipartMessageBuilder()
+    			.withHeaderContent(header)
+    			.withPayloadContent(payload)
+    			.build();
+		String responseMultipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
 
 		String contentType = multipartMessage.getHttpHeaders().getOrDefault("Content-Type", "multipart/mixed");
 		headesParts.put("Content-Type", contentType);
 
 		if (!isEnabledClearingHouse) {
-			// clear from Headers multipartMessageBody (it is not unusable for the Open Data
-			// App)
+			// clear from Headers multipartMessageBody (it is not unusable for the Open Data App)
 			Map<String, Object> headers = exchange.getIn().getHeaders();
 			headers.remove("multipartMessageBody");
 		}
 
 		// TODO: Send The MultipartMessage message to the WebSocket
-		if (isEnabledWebSocket) {
-			ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration
-					.responseMessageBufferWebSocket();
+		if(isEnabledWebSocket && !isEnabledUsageControl) {
+			ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration.responseMessageBufferWebSocket();
 			responseMessageServerBean.add(responseMultipartMessageString.getBytes());
 		}
 		

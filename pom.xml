@@ -22,7 +22,7 @@
 		<camel.version>2.24.2</camel.version>
 		<camel.version.rc>3.0.0-RC3</camel.version.rc>
 		<tomcat.version>9.0.24</tomcat.version>
-		<information.model.version>2.1.0-SNAPSHOT</information.model.version>
+		<information.model.version>4.0.0</information.model.version>
 		<application.basedir>${basedir}</application.basedir>
 	</properties>
 
@@ -319,6 +319,31 @@
 			<version>2.6</version>
 		</dependency>
 		
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15on</artifactId>
+			<version>1.63</version>
+		</dependency>
+
+		<!-- Usage Control -->
+
+		<dependency>
+			<groupId>de.fraunhofer.dataspaces.iese</groupId>
+			<artifactId>camel-interceptor-ucapp</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<!-- Usage Control -->
+		
+		<dependency>
+		  <groupId>org.mockito</groupId>
+		  <artifactId>mockito-core</artifactId>
+		  <scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>org.mockito</groupId>
+		    <artifactId>mockito-junit-jupiter</artifactId>
+		    <scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

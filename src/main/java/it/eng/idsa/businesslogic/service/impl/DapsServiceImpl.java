@@ -35,6 +35,7 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,6 +70,7 @@ import okhttp3.Response;
 /**
  * Service Implementation for managing DAPS.
  */
+@ConditionalOnProperty(name="application.dapsVersion", havingValue="v1")
 @Service
 @Transactional
 public class DapsServiceImpl implements DapsService {

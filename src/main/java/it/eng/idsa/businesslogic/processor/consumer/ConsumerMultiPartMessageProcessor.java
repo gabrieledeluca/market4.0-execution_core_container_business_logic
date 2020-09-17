@@ -68,6 +68,9 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 			headesParts.put("Is-Enabled-Daps-Interaction", isEnabledDapsInteraction);
 			headesParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 			headesParts.put("Is-Enabled-DataApp-WebSocket", isEnabledDataAppWebSocket);
+			// Save the original message header for Usage Control Enforcement
+			if(exchange.getIn().getHeaders().containsKey("Original-Message-Header"))
+				headesParts.put("Original-Message-Header", exchange.getIn().getHeaders().get("Original-Message-Header").toString());
 
 			if(exchange.getIn().getHeaders().containsKey("payload")) {
 				payload=exchange.getIn().getHeader("payload").toString();

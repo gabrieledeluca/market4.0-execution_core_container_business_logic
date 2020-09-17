@@ -45,6 +45,11 @@ public class ConsumerWebSocketSendDataToDataAppProcessor implements Processor {
     @Autowired
     private MessageWebSocketOverHttpSender messageWebSocketOverHttpSender;
 
+    @Value("${application.isEnabledUsageControl:false}")
+    private boolean isEnabledUsageControl;
+
+    private String originalHeader;
+
     @Override
     public void process(Exchange exchange) throws Exception {
 
@@ -53,6 +58,7 @@ public class ConsumerWebSocketSendDataToDataAppProcessor implements Processor {
         // Get header, payload and message
         String header = filterHeader(multipartMessageParts.get("header").toString());
         String payload = null;
+        this.originalHeader = header;
         if (multipartMessageParts.containsKey("payload")) {
             payload = multipartMessageParts.get("payload").toString();
         }
@@ -85,6 +91,10 @@ public class ConsumerWebSocketSendDataToDataAppProcessor implements Processor {
             String header = multipartMessageService.getHeaderContentString(response);
             String payload = multipartMessageService.getPayloadContent(response);
             exchange.getOut().setHeader("header", header);
+            //Save original Header for Usage Control Enforcement
+            if(isEnabledUsageControl) {
+                exchange.getOut().setHeader("Original-Message-Header", originalHeader);
+            }
             if (payload != null) {
                 exchange.getOut().setHeader("payload", payload);
             }

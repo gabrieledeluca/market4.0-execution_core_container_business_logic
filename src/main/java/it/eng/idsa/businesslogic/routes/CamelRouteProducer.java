@@ -64,7 +64,19 @@ public class CamelRouteProducer extends RouteBuilder {
 	ExceptionProcessorConsumer exceptionProcessorConsumer;
 
 	@Autowired
+	ProducerUsageControlProcessor producerUsageControlProcessor;
+
+	@Autowired
 	CamelContext camelContext;
+	
+	@Autowired
+	private ProducerCreateRegistrationMessageProcessor createRegitratioMessageProducer;
+	
+	@Autowired
+	private ProducerSendRegistrationRequestProcessor sendRegistrationRequestProcessor;
+	
+	@Autowired
+	private ProducerProcessRegistrationResponseProcessor processRegistrationResponseProducer;
 
 	@Value("${application.dataApp.websocket.isEnabled}")
 	private boolean isEnabledDataAppWebSocket;
@@ -79,6 +91,11 @@ public class CamelRouteProducer extends RouteBuilder {
 		onException(ExceptionForProcessor.class, RuntimeException.class)
 			.handled(true)
 			.process(processorException);
+		
+		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration")
+			.process(createRegitratioMessageProducer)
+            .process(sendRegistrationRequestProcessor)
+			.process(processRegistrationResponseProducer);
 
 		if(!isEnabledDataAppWebSocket) {
             // Camel SSL - Endpoint: A - Body binary
@@ -87,24 +104,22 @@ public class CamelRouteProducer extends RouteBuilder {
                     .choice()
                         .when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
                             .process(getTokenFromDapsProcessor)
-    //						.process(sendToActiveMQ)
-    //						.process(receiveFromActiveMQ)
-                            // Send data to Endpoint B
+                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
                             .process(parseReceivedResponseMessage)
                             .process(validateTokenProcessor)
                             .process(sendResponseToDataAppProcessor)
+                            .process(producerUsageControlProcessor)
                             .choice()
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                 .process(sendTransactionToCHProcessor)
                             .endChoice()
                         .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
-    //						.process(sendToActiveMQ)
-    //						.process(receiveFromActiveMQ)
                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
                             .process(parseReceivedResponseMessage)
                             .process(sendResponseToDataAppProcessor)
+                            .process(producerUsageControlProcessor)
                             .choice()
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                     .process(sendTransactionToCHProcessor)
@@ -117,24 +132,22 @@ public class CamelRouteProducer extends RouteBuilder {
                     .choice()
                         .when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
                             .process(getTokenFromDapsProcessor)
-    //						.process(sendToActiveMQ)
-    //						.process(receiveFromActiveMQ)
-                            // Send data to Endpoint B
+                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
                             .process(parseReceivedResponseMessage)
                             .process(validateTokenProcessor)
                             .process(sendResponseToDataAppProcessor)
+                            .process(producerUsageControlProcessor)
                             .choice()
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                     .process(sendTransactionToCHProcessor)
                             .endChoice()
                         .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
-        //					.process(sendToActiveMQ)
-        //					.process(receiveFromActiveMQ)
                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
                             .process(parseReceivedResponseMessage)
                             .process(sendResponseToDataAppProcessor)
+                            .process(producerUsageControlProcessor)
                             .choice()
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                     .process(sendTransactionToCHProcessor)
@@ -155,6 +168,7 @@ public class CamelRouteProducer extends RouteBuilder {
 								.process(validateTokenProcessor)
 								//.process(sendResponseToDataAppProcessor)
 								.process(sendResponseToDataAppProcessor)
+								.process(producerUsageControlProcessor)
 								.choice()
 								.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
 									.process(sendTransactionToCHProcessor)
@@ -163,8 +177,8 @@ public class CamelRouteProducer extends RouteBuilder {
 										// Send data to Endpoint B
 										.process(sendDataToBusinessLogicProcessor)
 										.process(parseReceivedResponseMessage)
-										//.process(sendResponseToDataAppProcessor)
 										.process(sendResponseToDataAppProcessor)
+										.process(producerUsageControlProcessor)
 								.choice()
 									.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
 									.process(sendTransactionToCHProcessor)

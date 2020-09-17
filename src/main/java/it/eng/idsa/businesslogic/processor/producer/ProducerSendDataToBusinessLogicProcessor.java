@@ -67,6 +67,9 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
 
+    @Value("${camel.component.jetty.use-global-ssl-context-parameters}")
+    private boolean isJettySSLEnabled;
+
 	@Autowired
 	private MultipartMessageService multipartMessageService;
 
@@ -102,8 +105,10 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		String forwardTo = headesParts.get("Forward-To").toString();
 		Message message = multipartMessageService.getMessage(header);
 
-		MultipartMessage multipartMessage = new MultipartMessageBuilder().withHeaderContent(header)
-				.withPayloadContent(payload).build();
+        MultipartMessage multipartMessage = new MultipartMessageBuilder()
+    			.withHeaderContent(header)
+    			.withPayloadContent(payload)
+    			.build();
 		String multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage);
 
 		if (isEnabledIdscp) {
@@ -112,17 +117,16 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 				this.extractWebSocketIPAndPort(forwardTo, REGEX_IDSCP);
 			} catch (Exception e) {
 				logger.info("... bad idscp URL");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+                rejectionMessageService.sendRejectionMessage(
+                        RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
 						message);
 			}
 			// -- Send data using IDSCP - (Client) - WebSocket
 			String response;
 			if (Boolean.parseBoolean(headesParts.get("Is-Enabled-Daps-Interaction").toString())) {
-				response = this.sendMultipartMessageWebSocket(this.webSocketHost, this.webSocketPort, messageWithToken,
-						payload, message);
+                response = this.sendMultipartMessageWebSocket(this.webSocketHost, this.webSocketPort, messageWithToken, payload, message);
 			} else {
-				response = this.sendMultipartMessageWebSocket(this.webSocketHost, this.webSocketPort, header, payload,
-						message);
+                response = this.sendMultipartMessageWebSocket(this.webSocketHost, this.webSocketPort, header, payload, message);
 			}
 			// Handle response
 			this.handleResponseWebSocket(exchange, message, response, forwardTo, multipartMessageString);
@@ -132,7 +136,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 				this.extractWebSocketIPAndPort(forwardTo, REGEX_WSS);
 			} catch (Exception e) {
 				logger.info("... bad wss URL");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+                rejectionMessageService.sendRejectionMessage(
+                        RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
 						message);
 			}
 
@@ -149,8 +154,13 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			this.handleResponseWebSocket(exchange, message, response, forwardTo, multipartMessageString);
 		} else {
 			// Send MultipartMessage HTTPS
-			CloseableHttpResponse response = this.sendMultipartMessage(headesParts, messageWithToken, header, payload,
-					forwardTo);
+            CloseableHttpResponse response = this.sendMultipartMessage(
+                    headesParts,
+                    messageWithToken,
+                    header,
+                    payload,
+                    forwardTo
+            );
 			// Handle response
 			this.handleResponse(exchange, message, response, forwardTo, multipartMessageString);
 
@@ -179,7 +189,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			}
 			default:
 				logger.error("Applicaton property: application.eccHttpSendRouter is not properly set");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES,
+    			rejectionMessageService.sendRejectionMessage(
+    					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
 						message);
 			}
 		} else {
@@ -194,7 +205,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			}
 			default:
 				logger.error("Applicaton property: application.eccHttpSendRouter is not properly set");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES,
+    			rejectionMessageService.sendRejectionMessage(
+    					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
 						message);
 			}
 		}
@@ -289,7 +301,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 	private CloseableHttpClient getHttpClient() {
 		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
 
-		CloseableHttpClient httpClient = HttpClientGenerator.get(config);
+        CloseableHttpClient httpClient = HttpClientGenerator.get(config, isJettySSLEnabled);
 		logger.warn("Created Accept-All Http Client");
 
 		return httpClient;
@@ -299,7 +311,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			String multipartMessageBody) throws UnsupportedOperationException, IOException {
 		if (response == null) {
 			logger.info("...communication error");
-			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+            rejectionMessageService.sendRejectionMessage(
+                    RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
 					message);
 		} else {
 			String responseString = new String(response.getEntity().getContent().readAllBytes());
@@ -310,11 +323,14 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			if (statusCode >= 300) {
 				if (statusCode == 404) {
 					logger.info("...communication error - bad forwardTo URL" + forwardTo);
-					rejectionMessageService
-							.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES, message);
+                    rejectionMessageService.sendRejectionMessage(
+                            RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+                            message);
 				}
 				logger.info("data sent unuccessfully to destination " + forwardTo);
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
+                rejectionMessageService.sendRejectionMessage(
+                        RejectionMessageType.REJECTION_MESSAGE_COMMON,
+                        message);
 			} else {
 				logger.info("data sent to destination " + forwardTo);
 				logger.info("Successful response: " + responseString);
@@ -339,7 +355,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			String multipartMessageBody) {
 		if (responseString == null) {
 			logger.info("...communication error");
-			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+            rejectionMessageService.sendRejectionMessage(
+                    RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
 					message);
 		} else {
 			logger.info("response received from the DataAPP=" + responseString);
@@ -386,7 +403,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			idscpClientBean.createIdscpClient();
 		} catch (Exception e) {
 			logger.info("... can not initilize the IdscpClient");
-			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+            rejectionMessageService.sendRejectionMessage(
+                    RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
 					message);
 		}
 	}
@@ -399,7 +417,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		} catch (Exception e) {
 			e.printStackTrace();
 			logger.info("... can not create the WebSocket connection IDSCP");
-			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+            rejectionMessageService.sendRejectionMessage(
+                    RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
 					message);
 		}
 		return wsClient;
@@ -416,8 +435,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 	}
 
 	private void closeWSClient(WebSocket wsClient) {
-		// Send the close frame 200 (OK), "Shutdown"; in this method we also close the
-		// wsClient.
+        // Send the close frame 200 (OK), "Shutdown"; in this method we also close the wsClient.
 		try {
 			wsClient.sendCloseFrame(200, "Shutdown");
 		} catch (Exception e) {

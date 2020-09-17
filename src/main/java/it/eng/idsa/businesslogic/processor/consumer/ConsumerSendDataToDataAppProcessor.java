@@ -49,6 +49,9 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	@Value("${application.openDataAppReceiverRouter}")
 	private String openDataAppReceiverRouter;
 
+	@Value("${application.isEnabledUsageControl:false}")
+	private boolean isEnabledUsageControl;
+
 	@Autowired
 	private ApplicationConfiguration configuration;
 
@@ -64,6 +67,8 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	@Value("${application.websocket.isEnabled}")
 	private boolean isEnabledWebSocket;
 
+	private String originalHeader;
+	
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		Map<String, Object> headerParts = exchange.getIn().getHeaders();
@@ -78,6 +83,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 		Message message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
 
+		this.originalHeader = header;
 		// Send data to the endpoint F for the Open API Data App
 		CloseableHttpResponse response = null;
 		switch (openDataAppReceiverRouter) {
@@ -186,7 +192,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	private CloseableHttpClient getHttpClient() {
 		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
 
-		CloseableHttpClient httpClient = HttpClientGenerator.get(config);
+		CloseableHttpClient httpClient = HttpClientGenerator.get(config, true);
 		logger.warn("Created Accept-All Http Client");
 
 		return httpClient;
@@ -227,10 +233,16 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 			logger.info("status code of the response message is: " + statusCode);
 			if (statusCode >= 300) {
 				logger.info("data sent to destination: " + openApiDataAppAddress);
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
+				rejectionMessageService.sendRejectionMessage(
+						RejectionMessageType.REJECTION_MESSAGE_COMMON, 
+						message);
 			} else {
 				logger.info("data sent to destination: " + openApiDataAppAddress);
 				logger.info("Successful response: " + responseString);
+				//Save original Header for Usage Control Enforcement
+				if(isEnabledUsageControl) {
+					exchange.getOut().setHeader("Original-Message-Header", originalHeader);
+				}
 				String header = multipartMessageService.getHeaderContentString(responseString);
 				String payload = multipartMessageService.getPayloadContent(responseString);
 				exchange.getOut().setHeaders(returnHeadersAsMap(response.getAllHeaders()));
