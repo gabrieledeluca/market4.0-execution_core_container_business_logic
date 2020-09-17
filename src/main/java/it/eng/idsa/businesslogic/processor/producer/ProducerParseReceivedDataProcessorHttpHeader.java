@@ -11,10 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
@@ -32,21 +30,21 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 	
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
+	
+	@Autowired
+	private HttpHeaderService headerService;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		
-		String header = null;
-		String payload = null;
 		Message message = null;
 		Map<String, Object> headersParts = new HashMap<String, Object>();
-		Map<String, Object> multipartMessageParts = new HashMap<String, Object>();
-		String receivedDataBodyBinary = null;
+		String payload = null;
 
 		// Get from the input "exchange"
 		headersParts = exchange.getIn().getHeaders();
-		receivedDataBodyBinary = exchange.getIn().getBody(String.class);
-		if (receivedDataBodyBinary == null) {
+		payload = exchange.getIn().getBody(String.class);
+		if (payload == null) {
 			logger.error("Body of the received multipart message is null");
 			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, message);
 
@@ -57,18 +55,14 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 
 			// Create multipart message parts
 			
-			String headerFromHeaders = getHeaderFromHeadersMap(headersParts);
-			header = multipartMessageService.getHeaderContentString(headerFromHeaders);
-			multipartMessageParts.put("header", header);
-			payload = multipartMessageService.getPayloadContent(receivedDataBodyBinary);
-			if(payload!=null) {
-				multipartMessageParts.put("payload", payload);
-			}
-			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+//			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
+//			multipartMessageParts.put("header", header);
+			//payload = multipartMessageService.getPayloadContent(receivedDataBodyBinary);
+//			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
 			
 			// Return exchange
 			exchange.getOut().setHeaders(headersParts);
-			exchange.getOut().setBody(multipartMessageParts);
+			exchange.getOut().setBody(payload);
 
 		} catch (Exception e) {
 			logger.error("Error parsing multipart message:" + e);
@@ -79,32 +73,4 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 	
 	}
 
-	private String getHeaderFromHeadersMap(Map<String, Object> headers) throws JsonProcessingException {
-
-		Map<String, String> headerAsMap = new HashMap<String, String>();
-		headerAsMap.put("@type", headers.get("IDS-Messagetype").toString());
-		headerAsMap.put("@id", headers.get("IDS-Id").toString());
-		headerAsMap.put("issued", headers.get("IDS-Issued").toString());
-		headerAsMap.put("modelVersion", headers.get("IDS-ModelVersion").toString());
-		headerAsMap.put("issuerConnector", headers.get("IDS-IssuerConnector").toString());
-		headerAsMap.put("transferContract", headers.get("IDS-TransferContract").toString());
-		headerAsMap.put("correlationMessage", headers.get("IDS-CorrelationMessage").toString());
-
-		removeMessageHeaders(headers);
-
-		String header = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(headerAsMap);
-
-		return header;
-
-	}
-
-	private void removeMessageHeaders(Map<String, Object> headers) {
-		headers.remove("IDS-Messagetype");                     
-		headers.remove("IDS-Id");                                
-	    headers.remove("IDS-Issued");                         
-        headers.remove("IDS-ModelVersion");             
-        headers.remove("IDS-IssuerConnector");       
-        headers.remove("IDS-TransferContract");     
-        headers.remove("IDS-CorrelationMessage"); 
-	}
 }

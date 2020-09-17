@@ -112,13 +112,13 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 	}
 
 	@Override
-	public Message getMessage(Object header) {
+	public Message getMessage(Object header) throws IOException {
 		Message message = null;
-		try {
+//		try {
 			message = new Serializer().deserialize(String.valueOf(header), Message.class);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 		return message;
 
 	}

@@ -1,5 +1,7 @@
 package it.eng.idsa.businesslogic.service;
 
+import java.io.IOException;
+
 import org.apache.http.HttpEntity;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,7 +21,7 @@ public interface MultipartMessageService {
 	public Message getMessage(String header);
 	public String addToken(Message message, String token);
 	public String removeToken(Message message);
-	public Message getMessage(Object header);
+	public Message getMessage(Object header) throws IOException;
 	public HttpEntity createMultipartMessage(String header, String payload, String frowardTo);
 	public String getToken(Message message) throws JsonProcessingException;
 	

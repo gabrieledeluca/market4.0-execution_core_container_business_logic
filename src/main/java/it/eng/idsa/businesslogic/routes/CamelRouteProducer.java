@@ -1,10 +1,5 @@
 package it.eng.idsa.businesslogic.routes;
 
-import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
-import it.eng.idsa.businesslogic.processor.exception.ExceptionForProcessor;
-import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorConsumer;
-import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorProducer;
-import it.eng.idsa.businesslogic.processor.producer.*;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -12,6 +7,22 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
+import it.eng.idsa.businesslogic.processor.exception.ExceptionForProcessor;
+import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorConsumer;
+import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorProducer;
+import it.eng.idsa.businesslogic.processor.producer.ProducerFileRecreatorProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerGetTokenFromDapsProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedDataFromDAppProcessorBodyBinary;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedDataProcessorBodyBinary;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedDataProcessorBodyFormData;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedDataProcessorHttpHeader;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedResponseMessage;
+import it.eng.idsa.businesslogic.processor.producer.ProducerSendDataToBusinessLogicProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerSendResponseToDataAppProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerSendTransactionToCHProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerValidateTokenProcessor;
 
 /**
  *
@@ -154,7 +165,6 @@ public class CamelRouteProducer extends RouteBuilder {
     //						.process(receiveFromActiveMQ)
                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
-                            .process(parseReceivedResponseMessage)
                             .process(validateTokenProcessor)
                             .process(sendResponseToDataAppProcessor)
                             .choice()
@@ -166,7 +176,6 @@ public class CamelRouteProducer extends RouteBuilder {
         //					.process(receiveFromActiveMQ)
                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
-                            .process(parseReceivedResponseMessage)
                             .process(sendResponseToDataAppProcessor)
                             .choice()
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
