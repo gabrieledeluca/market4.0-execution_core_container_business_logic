@@ -73,7 +73,6 @@ public class ConsumerValidateTokenProcessor implements Processor {
 		}
 		
 		logger.info("is token valid: "+isTokenValid);
-		
 		exchange.getOut().setHeaders(exchange.getIn().getHeaders());
 		if (eccHttpSendRouter.equals("http-header")) {
 			exchange.getOut().setBody(exchange.getIn().getBody());

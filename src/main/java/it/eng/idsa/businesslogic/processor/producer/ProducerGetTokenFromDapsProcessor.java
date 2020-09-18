@@ -120,6 +120,7 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 		
 		// Return exchange
 		exchange.getOut().setHeaders(headersParts);
+		exchange.getOut().setBody(multipartMessageParts);
 		
 		
 	}

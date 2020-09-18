@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationB;
 import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
+import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
@@ -42,11 +43,11 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 
-		Map<String, Object> headesParts = exchange.getIn().getHeaders();
+		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 
 		// Put in the header value of the application.property:
 		// application.isEnabledClearingHouse
-		headesParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
+		headersParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 		if (!eccHttpSendRouter.equals("http-header")) {
 			Map<String, Object> multipartMessagePartsReceived = exchange.getIn().getBody(HashMap.class);
 			// Get header, payload and message
@@ -60,7 +61,7 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 					.withPayloadContent(payload).build();
 			String responseString = MultipartMessageProcessor.multipartMessagetoString(responseMessage, false);
 			String contentType = responseMessage.getHttpHeaders().getOrDefault("Content-Type", "multipart/mixed");
-			headesParts.put("Content-Type", contentType);
+			headersParts.put("Content-Type", contentType);
 			exchange.getOut().setBody(responseString);
 			// TODO: Send The MultipartMessage message to the WebSocket
 			if (isEnabledIdscp || isEnabledWebSocket) { // TODO Try to remove this config property
@@ -71,7 +72,16 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 		} else {
 			exchange.getOut().setBody(exchange.getIn().getBody());
 		}
-		exchange.getOut().setHeaders(headesParts);
+		HeaderCleaner.removeTechnicalHeaders(headersParts);
+		if (isEnabledClearingHouse) {
+			// Put in the header value of the application.property:
+			// application.isEnabledClearingHouse
+			headersParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
+		}
+		if (isEnabledWebSocket) {
+			headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledWebSocket);
+		}
+		exchange.getOut().setHeaders(headersParts);
 
 	}
 }

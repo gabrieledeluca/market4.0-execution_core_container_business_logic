@@ -40,6 +40,7 @@ import it.eng.idsa.businesslogic.processor.producer.websocket.client.MessageWebS
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.businesslogic.util.communication.HttpClientGenerator;
 import it.eng.idsa.businesslogic.util.config.keystore.AcceptAllTruststoreConfig;
@@ -54,13 +55,13 @@ import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 @Component
 public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 
-    private static final Logger logger = LogManager.getLogger(ProducerSendDataToBusinessLogicProcessor.class);
-    // example for the webSocketURL: idscp://localhost:8099
-    public static final String REGEX_IDSCP = "(idscp://)([^:^/]*)(:)(\\d*)";
-    public static final String REGEX_WSS = "(wss://)([^:^/]*)(:)(\\d*)";
+	private static final Logger logger = LogManager.getLogger(ProducerSendDataToBusinessLogicProcessor.class);
+	// example for the webSocketURL: idscp://localhost:8099
+	public static final String REGEX_IDSCP = "(idscp://)([^:^/]*)(:)(\\d*)";
+	public static final String REGEX_WSS = "(wss://)([^:^/]*)(:)(\\d*)";
 
-    @Value("${application.idscp.isEnabled}")
-    private boolean isEnabledIdscp;
+	@Value("${application.idscp.isEnabled}")
+	private boolean isEnabledIdscp;
 
     @Value("${application.websocket.isEnabled}")
     private boolean isEnabledWebSocket;
@@ -75,25 +76,29 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 	private String openDataAppReceiverRouter;
 
     @Autowired
-    private MultipartMessageService multipartMessageService;
-
-    @Autowired
     private RejectionMessageService rejectionMessageService;
     
     @Autowired
     private HttpHeaderService headerService;
+    
+    @Value("${camel.component.jetty.use-global-ssl-context-parameters}")
+    private boolean isJettySSLEnabled;
 
-    @Autowired
-    private WebSocketClientConfiguration webSocketClientConfiguration;
+	@Autowired
+	private MultipartMessageService multipartMessageService;
 
-    @Autowired
-    private MessageWebSocketOverHttpSender messageWebSocketOverHttpSender;
+	@Autowired
+	private WebSocketClientConfiguration webSocketClientConfiguration;
 
-    private String webSocketHost;
-    private Integer webSocketPort;
+	@Autowired
+	private MessageWebSocketOverHttpSender messageWebSocketOverHttpSender;
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
+	private String webSocketHost;
+	
+	private Integer webSocketPort;
+
+	@Override
+	public void process(Exchange exchange) throws Exception {
 
         Map<String, Object> headesParts = exchange.getIn().getHeaders();
         
@@ -335,18 +340,33 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         return response;
     }
     
-    private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload, Map<String, Object> headerParts) throws ClientProtocolException, IOException {
+
+	private void addHeadersToHttpPost(Map<String, Object> headesParts, HttpPost httpPost) {
+		HeaderCleaner.removeTechnicalHeaders(headesParts);
+		
+		headesParts.forEach((name, value) -> {
+			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
+				if (value != null) {
+					httpPost.setHeader(name, value.toString());
+				} else {
+					httpPost.setHeader(name, null);
+				}
+
+			}
+		});
+	}
+
+	private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload,
+			Map<String, Object> headesParts) throws ClientProtocolException, IOException {
 		logger.info("Forwarding Message: Body: form-data");
 
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
-
+		addHeadersToHttpPost(headesParts, httpPost);
 		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
 		httpPost.setEntity(reqEntity);
-		
-
 		CloseableHttpResponse response;
-		
+
 		try {
 			response = getHttpClient().execute(httpPost);
 		} catch (ClientProtocolException e) {
@@ -362,22 +382,23 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		return response;
 	}
 
-    private ContentBody convertToContentBody(String value, ContentType contentType, String valueName) throws UnsupportedEncodingException {
-        byte[] valueBiteArray = value.getBytes("utf-8");
-        ContentBody cbValue = new ByteArrayBody(valueBiteArray, contentType, valueName);
-        return cbValue;
-    }
+	private ContentBody convertToContentBody(String value, ContentType contentType, String valueName)
+			throws UnsupportedEncodingException {
+		byte[] valueBiteArray = value.getBytes("utf-8");
+		ContentBody cbValue = new ByteArrayBody(valueBiteArray, contentType, valueName);
+		return cbValue;
+	}
 
-    private CloseableHttpClient getHttpClient() {
-        AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
+	private CloseableHttpClient getHttpClient() {
+		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
 
-        CloseableHttpClient httpClient = HttpClientGenerator.get(config);
-        logger.warn("Created Accept-All Http Client");
+        CloseableHttpClient httpClient = HttpClientGenerator.get(config, isJettySSLEnabled);
+		logger.warn("Created Accept-All Http Client");
 
-        return httpClient;
-    }
+		return httpClient;
+	}
 
-    private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String forwardTo, String multipartMessageBody) throws UnsupportedOperationException, IOException {
+	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String forwardTo, String multipartMessageBody) throws UnsupportedOperationException, IOException {
         if (response == null) {
             logger.info("...communication error");
             rejectionMessageService.sendRejectionMessage(
@@ -510,3 +531,4 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         }
     }
 }
+

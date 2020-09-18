@@ -69,7 +69,7 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		
 	}
 
-	private void addTokenToPreparedMessage(String header, Map<String, Object> messageAsMap) throws JsonMappingException, JsonProcessingException {
+	private void addTokenToPreparedMessage(String header, Map<String, Object> messageAsMap) throws IOException {
 		Map<String, Object> messageAsMapWithToken = new ObjectMapper().readValue(header, Map.class);
 		
 		Map<String, Object> tokenAsMap = (Map<String, Object>) messageAsMapWithToken.get("authorizationToken");

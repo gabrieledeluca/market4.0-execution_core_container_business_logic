@@ -80,7 +80,7 @@ public class HashFileServiceImpl implements HashFileService {
                     path,
                     content.getBytes(),
                     StandardOpenOption.CREATE);
-            logger.info("Recorded Hash in FileSystem: " + content);
+            logger.debug("Recorded Hash in FileSystem: " + content);
         } catch (Exception e) {
             logger.error("Recording of HASH in FileSystem encountered and error: " + e.getMessage());
         }

@@ -1,5 +1,6 @@
+
 /**
- * 
+ *
  */
 package it.eng.idsa.businesslogic.service.impl;
 
@@ -64,10 +65,11 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 	@Autowired
 	private HashFileService hashService;
 
-
+	
 	@Override
 	public boolean registerTransaction(Message correlatedMessage, String payload) {
 		// TODO Auto-generated method stub
+		
 		try {
 			logger.debug("registerTransaction...");
 			try {

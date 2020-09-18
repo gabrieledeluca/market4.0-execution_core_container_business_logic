@@ -59,7 +59,6 @@ public class ProducerParseReceivedDataProcessorBodyBinary implements Processor {
 			// Create headers parts
 			// Put in the header value of the application.property: application.isEnabledDapsInteraction
 			headesParts.put("Is-Enabled-Daps-Interaction", isEnabledDapsInteraction);
-
 			// Create multipart message parts
 			header = multipartMessageService.getHeaderContentString(receivedDataBodyBinary);
 			multipartMessageParts.put("header", header);

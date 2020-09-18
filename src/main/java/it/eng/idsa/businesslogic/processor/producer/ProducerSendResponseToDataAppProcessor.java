@@ -16,6 +16,7 @@ import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationA;
 import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
@@ -40,6 +41,9 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 
 	@Value("${application.openDataAppReceiverRouter}")
 	private String openDataAppReceiverRouter;
+	
+	@Value("${application.isEnabledUsageControl:false}")
+	private boolean isEnabledUsageControl;
 
 	@Autowired(required = false)
 	WebSocketServerConfigurationA webSocketServerConfiguration;

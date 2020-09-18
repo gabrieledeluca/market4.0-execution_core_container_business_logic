@@ -70,6 +70,9 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 				// Create headers parts
 				// Put in the header value of the application.property: application.isEnabledDapsInteraction
 				
+			// Save the original message header for Usage Control Enforcement
+			if(exchange.getIn().getHeaders().containsKey("Original-Message-Header"))
+				headesParts.put("Original-Message-Header", exchange.getIn().getHeaders().get("Original-Message-Header").toString());
 
 				if (exchange.getIn().getHeaders().containsKey("payload")) {
 					payload = exchange.getIn().getHeader("payload").toString();
