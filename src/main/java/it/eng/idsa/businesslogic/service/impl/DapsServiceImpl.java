@@ -228,31 +228,11 @@ public class DapsServiceImpl implements DapsService {
             if (!responseDaps.isSuccessful())
                 throw new IOException("Unexpected code " + responseDaps);
 
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        } catch (IOException |KeyStoreException | NoSuchAlgorithmException | 
+        		CertificateException |KeyManagementException | UnrecoverableKeyException e) {
+        	logger.error(e);
             return null;
-        } catch (KeyStoreException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return null;
-        } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return null;
-        } catch (CertificateException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return null;
-        } catch (UnrecoverableKeyException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return null;
-        } catch (KeyManagementException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
+        	}
         return token;
     }
 
@@ -335,7 +315,7 @@ public class DapsServiceImpl implements DapsService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+        	logger.error(e);
         }
 
         return isValid;

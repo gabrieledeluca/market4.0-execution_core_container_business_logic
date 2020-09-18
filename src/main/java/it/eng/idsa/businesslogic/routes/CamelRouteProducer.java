@@ -5,6 +5,11 @@ import it.eng.idsa.businesslogic.processor.exception.ExceptionForProcessor;
 import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorConsumer;
 import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorProducer;
 import it.eng.idsa.businesslogic.processor.producer.*;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateDeleteMessageProcessor;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreatePassivateMessageProcessor;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateRegistrationMessageProcessor;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateUpdateMessageProcessor;
+
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -68,13 +73,19 @@ public class CamelRouteProducer extends RouteBuilder {
 
 	@Autowired
 	CamelContext camelContext;
-	
+
 	@Autowired
-	private ProducerCreateRegistrationMessageProcessor createRegitratioMessageProducer;
-	
+	private ProducerCreateRegistrationMessageProcessor createRegistratioMessageProducer;
+	@Autowired
+	private ProducerCreateUpdateMessageProcessor createUpdateMessageProducer;
+	@Autowired
+	private ProducerCreateDeleteMessageProcessor createDeleteMessageProducer;
+	@Autowired
+	private ProducerCreatePassivateMessageProcessor createPassivateMessageProducer;
+
 	@Autowired
 	private ProducerSendRegistrationRequestProcessor sendRegistrationRequestProcessor;
-	
+
 	@Autowired
 	private ProducerProcessRegistrationResponseProcessor processRegistrationResponseProducer;
 
@@ -92,8 +103,20 @@ public class CamelRouteProducer extends RouteBuilder {
 			.handled(true)
 			.process(processorException);
 		
-		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration")
-			.process(createRegitratioMessageProducer)
+		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/register")
+			.process(createRegistratioMessageProducer)
+			.to("direct:registrationProcess");
+		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/update")
+			.process(createUpdateMessageProducer)
+		.to("direct:registrationProcess");
+		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/delete")
+			.process(createDeleteMessageProducer)
+		.to("direct:registrationProcess");
+		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/passivate")
+			.process(createPassivateMessageProducer)
+		.to("direct:registrationProcess");
+			
+		from("direct:registrationProcess")
             .process(sendRegistrationRequestProcessor)
 			.process(processRegistrationResponseProducer);
 

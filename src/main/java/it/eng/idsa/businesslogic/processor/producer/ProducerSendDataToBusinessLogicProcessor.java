@@ -114,7 +114,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
             try {
                 this.extractWebSocketIPAndPort(forwardTo, REGEX_IDSCP);
             } catch (Exception e) {
-                logger.info("... bad idscp URL");
+                logger.info("... bad idscp URL", e);
                 rejectionMessageService.sendRejectionMessage(
                         RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
                         message);
@@ -133,7 +133,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         	try {
                 this.extractWebSocketIPAndPort(forwardTo, REGEX_WSS);
             } catch (Exception e) {
-                logger.info("... bad wss URL");
+                logger.info("... bad wss URL", e);
                 rejectionMessageService.sendRejectionMessage(
                         RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
                         message);
@@ -241,13 +241,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         CloseableHttpResponse response;
         try {
             response = getHttpClient().execute(httpPost);
-        } catch (ClientProtocolException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return null;
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            logger.error(e);
             return null;
         }
 
@@ -267,16 +262,10 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		
 		try {
 			response = getHttpClient().execute(httpPost);
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 			return null;
 		}
-
 		return response;
 	}
 
@@ -378,6 +367,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
             idscpClientBean.createIdscpClient();
         } catch (Exception e) {
             logger.info("... can not initilize the IdscpClient");
+            logger.error(e);
             rejectionMessageService.sendRejectionMessage(
                     RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
                     message);
@@ -389,8 +379,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         try {
             wsClient = idscpClient.connect(webSocketHost, webSocketPort);
         } catch (Exception e) {
-        	e.printStackTrace();
             logger.info("... can not create the WebSocket connection IDSCP");
+            logger.error(e);
             rejectionMessageService.sendRejectionMessage(
                     RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
                     message);
@@ -413,8 +403,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         try {
             wsClient.sendCloseFrame(200, "Shutdown");
         } catch (Exception e) {
-            //TODO: Handle rejection message
-            e.printStackTrace();
+        	logger.error(e);
         }
     }
 }

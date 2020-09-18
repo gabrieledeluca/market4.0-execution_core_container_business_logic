@@ -134,13 +134,8 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		
 		try {
 			response = getHttpClient().execute(httpPost);
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("Error executing binary request", e);
 			return null;
 		}
 
@@ -160,13 +155,8 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		
 		try {
 			response = getHttpClient().execute(httpPost);
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("Error executing form data request", e);
 			return null;
 		}
 

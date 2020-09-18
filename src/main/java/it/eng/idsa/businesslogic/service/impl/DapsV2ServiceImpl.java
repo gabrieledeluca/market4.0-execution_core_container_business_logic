@@ -534,7 +534,7 @@ public class DapsV2ServiceImpl implements DapsService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+        	logger.error(e.getMessage());
         }
 
         return isValid;

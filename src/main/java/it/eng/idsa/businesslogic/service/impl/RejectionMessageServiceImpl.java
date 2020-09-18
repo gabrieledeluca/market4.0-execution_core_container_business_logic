@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.Properties;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.project.MavenProject;
@@ -34,6 +36,8 @@ import it.eng.idsa.multipart.util.DateUtil;
 @Service
 @Transactional
 public class RejectionMessageServiceImpl implements RejectionMessageService{
+	
+	private static final Logger logger = LogManager.getLogger(RejectionMessageServiceImpl.class);
 
 	@Value("${information.model.version}")
 	private String informationModelVersion;
@@ -104,7 +108,7 @@ public class RejectionMessageServiceImpl implements RejectionMessageService{
 				}
 			}
 		}catch(Exception e) {
-			e.printStackTrace();
+			logger.error(e);
 		}
 
 		return currentInformationModelVersion;

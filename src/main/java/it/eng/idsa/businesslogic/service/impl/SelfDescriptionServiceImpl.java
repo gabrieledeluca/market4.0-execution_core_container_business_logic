@@ -111,7 +111,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		try {
 			result = serializer.serialize(this.connector);
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error(e);
 		}
 		return result;
 	}

@@ -21,16 +21,30 @@ import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.businesslogic.util.communication.HttpClientGenerator;
 import it.eng.idsa.businesslogic.util.config.keystore.AcceptAllTruststoreConfig;
+import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
+import it.eng.idsa.multipart.domain.MultipartMessage;
+import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 
 @Component
 public class ProducerSendRegistrationRequestProcessor implements Processor {
 
 	private static final Logger logger = LogManager.getLogger(ProducerSendRegistrationRequestProcessor.class);
 
+	@Autowired
+    private MultipartMessageService multipartMessageService;
+	
+    @Autowired
+    private RejectionMessageService rejectionMessageService;
+	   
 	@Override
 	public void process(Exchange exchange) throws Exception {
 
@@ -43,13 +57,24 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 		if (multipartMessageParts.containsKey("payload")) {
 			payload = multipartMessageParts.get("payload").toString();
 		}
+		
+		Message message = multipartMessageService.getMessage(header);
+        MultipartMessage multipartMessage = new MultipartMessageBuilder()
+    			.withHeaderContent(header)
+    			.withPayloadContent(payload)
+    			.build();
+        String multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage);
+
 
 		CloseableHttpResponse response = this.sendMultipartMessage(headesParts, header, payload, forwardTo);
 		// Handle response
 //		this.handleResponse(exchange, message, response, forwardTo, multipartMessageString);
 
-		String responseString = new String(response.getEntity().getContent().readAllBytes());
-		logger.info("response received from the DataAPP=" + responseString);
+//		String responseString = new String(response.getEntity().getContent().readAllBytes());
+//		logger.info("response received from the DataAPP=" + responseString);
+
+        // Handle response
+        this.handleResponse(exchange, message, response, forwardTo, multipartMessageString);
 
 		if (response != null) {
 			response.close();
@@ -88,13 +113,8 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 		CloseableHttpResponse response;
 		try {
 			response = getHttpClient().execute(httpPost);
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 			return null;
 		}
 
@@ -117,4 +137,37 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 		return httpClient;
 	}
 
+	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String forwardTo, String multipartMessageBody) throws UnsupportedOperationException, IOException {
+        if (response == null) {
+            logger.info("...communication error");
+            rejectionMessageService.sendRejectionMessage(
+                    RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+                    message);
+        } else {
+            String responseString = new String(response.getEntity().getContent().readAllBytes());
+            logger.info("response received from the DataAPP=" + responseString);
+
+            int statusCode = response.getStatusLine().getStatusCode();
+            logger.info("status code of the response message is: " + statusCode);
+            if (statusCode >= 300) {
+                if (statusCode == 404) {
+                    logger.info("...communication error - bad forwardTo URL" + forwardTo);
+                    rejectionMessageService.sendRejectionMessage(
+                            RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+                            message);
+                }
+                logger.info("data sent unuccessfully to destination " + forwardTo);
+                rejectionMessageService.sendRejectionMessage(
+                        RejectionMessageType.REJECTION_MESSAGE_COMMON,
+                        message);
+            } else {
+                logger.info("data sent to destination " + forwardTo);
+                logger.info("Successful response: " + responseString);
+                // TODO:
+                // Set original body which is created using the original payload and header
+                exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
+                exchange.getOut().setBody(responseString);
+            }
+        }
+    }
 }

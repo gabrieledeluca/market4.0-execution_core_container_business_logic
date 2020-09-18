@@ -48,7 +48,7 @@ private static final Logger logger = LogManager.getLogger(ConsumerGetTokenFromDa
 			message=multipartMessageService.getMessage(multipartMessageParts.get("header"));
 			logger.info("message id=" + message.getId());
 		}catch (Exception e) {
-			logger.error("Error parsing multipart message:" + e);
+			logger.error("Error parsing multipart message:", e);
 			rejectionMessageService.sendRejectionMessage(
 					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
 					message);
@@ -67,7 +67,7 @@ private static final Logger logger = LogManager.getLogger(ConsumerGetTokenFromDa
 			token=dapsService.getJwtToken();
 //			token="456";
 		}catch (Exception e) {
-			logger.error("Can not get the token from the DAPS server " + e);
+			logger.error("Can not get the token from the DAPS server ", e);
 			rejectionMessageService.sendRejectionMessage(
 					RejectionMessageType.REJECTION_TOKEN_LOCAL_ISSUES, 
 					message);

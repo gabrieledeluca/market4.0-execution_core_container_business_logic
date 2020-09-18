@@ -29,8 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import de.fraunhofer.iais.eis.LogNotification;
-import de.fraunhofer.iais.eis.LogNotificationBuilder;
+import de.fraunhofer.iais.eis.LogMessage;
+import de.fraunhofer.iais.eis.LogMessageBuilder;
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
 import it.eng.idsa.businesslogic.service.ClearingHouseService;
@@ -80,20 +80,20 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 			recipientConnectors.add(connectorURI);
 
 			// Infomodel version 4.0.0
-//			LogMessage logInfo = new LogMessageBuilder()
-//					._modelVersion_(informationModelVersion)
-//					._issuerConnector_(whoIAm())
-//					._issued_(xgcal)
-//					.build();
+			LogMessage logInfo = new LogMessageBuilder()
+					._modelVersion_(informationModelVersion)
+					._issuerConnector_(whoIAm())
+					._issued_(xgcal)
+					.build();
 
 			// Infomodel version 2.1.0-SNAPSHOT
-			LogNotification logInfo=new LogNotificationBuilder()
-				._modelVersion_(informationModelVersion)
-				._issuerConnector_(whoIAm())
-				._issued_(xgcal) .build();
+//			LogNotification logInfo=new LogNotificationBuilder()
+//				._modelVersion_(informationModelVersion)
+//				._issuerConnector_(whoIAm())
+//				._issued_(xgcal) .build();
 
 			NotificationContent notificationContent = new NotificationContent();
-			notificationContent.setHeader(logInfo);
+//			notificationContent.setHeader(logInfo);
 			Body body = new Body();
 			body.setHeader(correlatedMessage);
 			String hash = hashService.hash(payload);

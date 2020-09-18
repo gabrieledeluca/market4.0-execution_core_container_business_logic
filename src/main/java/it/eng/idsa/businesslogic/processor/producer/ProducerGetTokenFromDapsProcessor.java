@@ -66,7 +66,7 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 			token=dapsService.getJwtToken();
 //			token="123";
 		}catch (Exception e) {
-			logger.error("Can not get the token from the DAPS server " + e);
+			logger.error("Can not get the token from the DAPS server ", e);
 			rejectionMessageService.sendRejectionMessage(
 					RejectionMessageType.REJECTION_TOKEN_LOCAL_ISSUES, 
 					message);
