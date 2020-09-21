@@ -114,7 +114,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
             try {
                 this.extractWebSocketIPAndPort(forwardTo, REGEX_IDSCP);
             } catch (Exception e) {
-                logger.info("... bad idscp URL", e);
+                logger.info("... bad idscp URL - '{}' {}", forwardTo, e.getMessage());
                 rejectionMessageService.sendRejectionMessage(
                         RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
                         message);
@@ -133,7 +133,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         	try {
                 this.extractWebSocketIPAndPort(forwardTo, REGEX_WSS);
             } catch (Exception e) {
-                logger.info("... bad wss URL", e);
+                logger.info("... bad wss URL - '{}', {}", forwardTo, e.getMessage());
                 rejectionMessageService.sendRejectionMessage(
                         RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
                         message);

@@ -118,7 +118,9 @@ public class CamelRouteProducer extends RouteBuilder {
 			
 		from("direct:registrationProcess")
             .process(sendRegistrationRequestProcessor)
-			.process(processRegistrationResponseProducer);
+			.process(processRegistrationResponseProducer)
+			.process(parseReceivedResponseMessage)
+			.process(sendResponseToDataAppProcessor);
 
 		if(!isEnabledDataAppWebSocket) {
             // Camel SSL - Endpoint: A - Body binary
