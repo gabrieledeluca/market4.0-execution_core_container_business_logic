@@ -16,6 +16,7 @@ import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationA;
 import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
@@ -38,6 +39,9 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 	@Value("${application.dataApp.websocket.isEnabled}")
 	private boolean isEnabledWebSocket;
 
+	@Value("${application.openDataAppReceiverRouter}")
+	private String openDataAppReceiverRouter;
+	
 	@Value("${application.isEnabledUsageControl:false}")
 	private boolean isEnabledUsageControl;
 
@@ -47,12 +51,18 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		
-		Map<String, Object> headesParts = exchange.getIn().getHeaders();
+		Map<String, Object> headerParts = exchange.getIn().getHeaders();
+		
+		// Put in the header value of the application.property:
+		// application.isEnabledClearingHouse
+		headerParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
+
+		if (openDataAppReceiverRouter.equals("http-header")) {
+			removeTokenFromHeaders(headerParts);
+			exchange.getOut().setBody(exchange.getIn().getBody());
+		} else {
 		
 		Map<String, Object> multipartMessagePartsReceived = exchange.getIn().getBody(HashMap.class);
-		
-		// Put in the header value of the application.property: application.isEnabledClearingHouse
-		headesParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 		
 		String header = null;
 		String payload = null;
@@ -77,7 +87,7 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 		String responseMultipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
 		
 		String contentType = multipartMessage.getHttpHeaders().getOrDefault("Content-Type", "multipart/mixed");
-		headesParts.put("Content-Type", contentType);
+		headerParts.put("Content-Type", contentType);
 		
 		if(!isEnabledClearingHouse) {
 			// clear from Headers multipartMessageBody (it is not unusable for the Open Data App)
@@ -90,9 +100,18 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 			ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration.responseMessageBufferWebSocket();
 			responseMessageServerBean.add(responseMultipartMessageString.getBytes());
 		}
+			exchange.getOut().setBody(responseMultipartMessageString);
+		}
+		exchange.getOut().setHeaders(headerParts);
 
-		exchange.getOut().setHeaders(headesParts);
-		exchange.getOut().setBody(responseMultipartMessageString);
+	}
+
+	private void removeTokenFromHeaders(Map<String, Object> headerParts) {
+		headerParts.remove("IDS-SecurityToken-Type");
+		headerParts.remove("IDS-SecurityToken-Id");
+		headerParts.remove("IDS-SecurityToken-TokenFormat");
+		headerParts.remove("IDS-SecurityToken-TokenValue");
+
 	}	
 
 	private String filterHeader(String header) throws JsonMappingException, JsonProcessingException {

@@ -1,9 +1,5 @@
 package it.eng.idsa.businesslogic.routes;
 
-import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
-import it.eng.idsa.businesslogic.processor.consumer.*;
-import it.eng.idsa.businesslogic.processor.exception.ExceptionForProcessor;
-import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorConsumer;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -11,6 +7,21 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerExceptionMultiPartMessageProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerFileRecreatorProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerGetTokenFromDapsProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerHttpHeaderProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerMultiPartMessageProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerSendDataToBusinessLogicProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerSendDataToDataAppProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerSendTransactionToCHProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerUsageControlProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerValidateTokenProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerWebSocketSendDataToDataAppProcessor;
+import it.eng.idsa.businesslogic.processor.exception.ExceptionForProcessor;
+import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorConsumer;
 
 /**
  * 
@@ -34,6 +45,9 @@ public class CamelRouteConsumer extends RouteBuilder {
 	
 	@Autowired
 	ConsumerMultiPartMessageProcessor multiPartMessageProcessor;
+	
+	@Autowired
+	ConsumerHttpHeaderProcessor httpHeaderProcessor;
 	
 	@Autowired
 	ConsumerSendDataToDataAppProcessor sendDataToDataAppProcessor;
@@ -73,7 +87,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 		logger.debug("Starting Camel Routes...consumer side");
         camelContext.getShutdownStrategy().setLogInflightExchangesOnTimeout(false);
         camelContext.getShutdownStrategy().setTimeout(3);
-		//@formatter:off
+
 		onException(ExceptionForProcessor.class, RuntimeException.class)
 			.handled(true)
 			.process(exceptionProcessorConsumer)
@@ -97,6 +111,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 		// Camel SSL - Endpoint: B
 		if(!isEnabledIdscp && !isEnabledWebSocket) {
 			from("jetty://https4://0.0.0.0:" + configuration.getCamelConsumerPort() + "/incoming-data-channel/receivedMessage")
+					.process(httpHeaderProcessor)
 					.process(multiPartMessageProcessor)
 					.choice()
 					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
@@ -134,7 +149,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 					.endChoice();
 		} else if (isEnabledIdscp || isEnabledWebSocket) {
 			// End point B. ECC communication (Web Socket or IDSCP)
-			from("timer://timerEndpointB?repeatCount=-1") //EndPoint B
+			from("timer://timerEndpointB?fixedRate=true&period=10s") //EndPoint B
 					.process(fileRecreatorProcessor)
 					.process(multiPartMessageProcessor)
 					.choice()
@@ -171,7 +186,6 @@ public class CamelRouteConsumer extends RouteBuilder {
 									// .process(sendTransactionToCHProcessor)
 							.endChoice()
 					.endChoice();
-			//@formatter:on
 		}
 
 	}

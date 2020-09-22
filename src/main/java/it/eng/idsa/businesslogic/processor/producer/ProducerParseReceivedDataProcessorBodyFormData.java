@@ -53,6 +53,7 @@ public class ProducerParseReceivedDataProcessorBodyFormData implements Processor
 		try {
 			// Create headers parts
 			// Put in the header value of the application.property: application.isEnabledDapsInteraction
+			headesParts =exchange.getIn().getHeaders();
 			headesParts.put("Is-Enabled-Daps-Interaction", isEnabledDapsInteraction);
 			contentType = receivedDataHeader.get("Content-Type").toString();
 			headesParts.put("Content-Type", contentType);

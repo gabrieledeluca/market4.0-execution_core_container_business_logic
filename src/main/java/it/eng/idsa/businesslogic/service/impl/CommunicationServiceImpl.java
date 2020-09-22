@@ -108,7 +108,7 @@ public class CommunicationServiceImpl implements CommunicationService {
 		
 		String result;
 		try {
-			result = restTemplate.postForObject (endpoint, data, String.class); 
+			result = restTemplate.postForObject(endpoint, data, String.class); 
 		} catch (RestClientException e) {
 			logger.error(e);
 			return null;

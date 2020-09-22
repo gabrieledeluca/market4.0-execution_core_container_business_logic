@@ -7,11 +7,13 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.entity.mime.content.ContentBody;
@@ -27,8 +29,10 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
+import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.businesslogic.util.communication.HttpClientGenerator;
 import it.eng.idsa.businesslogic.util.config.keystore.AcceptAllTruststoreConfig;
@@ -47,6 +51,12 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 	@Value("${application.openDataAppReceiverRouter}")
 	private String openDataAppReceiverRouter;
 
+	@Value("${application.isEnabledDapsInteraction}")
+	private boolean isEnabledDapsInteraction;
+	
+	@Value("${application.eccHttpSendRouter}")
+	private String eccHttpSendRouter;
+
 	@Value("${application.isEnabledUsageControl:false}")
 	private boolean isEnabledUsageControl;
 
@@ -61,31 +71,54 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 	private String originalHeader;
 
+	@Autowired
+	private HttpHeaderService headerService;
+
+	@Value("${application.idscp.isEnabled}")
+	private boolean isEnabledIdscp;
+
+	@Value("${application.websocket.isEnabled}")
+	private boolean isEnabledWebSocket;
+	
 	@Override
 	public void process(Exchange exchange) throws Exception {
 
-		Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
-
+		Map<String, Object> headerParts = exchange.getIn().getHeaders();
+		Map<String, Object> multipartMessageParts = null;
+		
 		// Get header, payload and message
-		String header = filterHeader(multipartMessageParts.get("header").toString());
+		String header = null;
 		String payload = null;
+		Message message = null;
+		if (!eccHttpSendRouter.equals("http-header")) {
+			multipartMessageParts = exchange.getIn().getBody(HashMap.class);
+			header = filterHeader(multipartMessageParts.get("header").toString());
+			payload = null;
 		if(multipartMessageParts.containsKey("payload")) {
 			payload = multipartMessageParts.get("payload").toString();
 		}
-		Message message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+		} else {
+			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headerParts);
+			payload = exchange.getIn().getBody(String.class);
+		}
+
 
 		this.originalHeader = header;
 		// Send data to the endpoint F for the Open API Data App
 		CloseableHttpResponse response = null;
 		switch(openDataAppReceiverRouter) {
-		case "mixed":
-		{
-			response =  forwardMessageBinary(configuration.getOpenDataAppReceiver(), header, payload);
+		case "mixed": {
+			response = forwardMessageBinary(configuration.getOpenDataAppReceiver(), header, payload, headerParts);
 			break;
 		}
-		case "form":
+		case "form": {
+			response = forwardMessageFormData(configuration.getOpenDataAppReceiver(), header, payload, headerParts);
+			break;
+		}
+		case "http-header":
 		{
-			response =  forwardMessageFormData(configuration.getOpenDataAppReceiver(), header, payload);
+			response =  forwardMessageHttpHeader(configuration.getOpenDataAppReceiver(), payload, headerParts);
 			break;
 		}
 		default: {
@@ -105,7 +138,53 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 	}
 
-	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws ClientProtocolException, IOException {
+
+	private CloseableHttpResponse forwardMessageHttpHeader(String address, String payload, Map<String, Object> headerParts) throws IOException {
+		logger.info("Forwarding Message: Body: http-header");
+		
+		// Set F address
+		HttpPost httpPost = new HttpPost(address);
+		
+		addHeadersToHttpPost(httpPost, headerParts);
+		
+		if (payload != null) {
+			StringEntity payloadEntity = new StringEntity(payload);
+			httpPost.setEntity(payloadEntity);
+		}
+		CloseableHttpResponse response;
+
+		try {
+			response = getHttpClient().execute(httpPost);
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+
+		return response;
+	}
+
+
+	private void addHeadersToHttpPost(HttpPost httpPost, Map<String, Object> headerParts) {
+		headerParts.forEach((name, value) -> {
+			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
+				if (value != null) {
+					httpPost.addHeader(name, value.toString());
+				} else {
+					httpPost.addHeader(name, null);
+				}
+			}
+		});
+		
+	}
+
+
+	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload,
+			Map<String, Object> headerParts) throws ClientProtocolException, IOException {
 		logger.info("Forwarding Message: Body: binary");
 
 		// Covert to ContentBody
@@ -117,6 +196,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
+		addHeadersToHttpPost(headerParts, httpPost);
 
 		HttpEntity reqEntity = payload==null ?
 			MultipartEntityBuilder.create()
@@ -142,11 +222,13 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		return response;
 	}
 
-	private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload) throws ClientProtocolException, IOException {
+	private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload,
+			Map<String, Object> headerParts) throws ClientProtocolException, IOException {
 		logger.info("Forwarding Message: Body: form-data");
 
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
+		addHeadersToHttpPost(headerParts, httpPost);
 
 		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
 		httpPost.setEntity(reqEntity);
@@ -161,6 +243,21 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		}
 
 		return response;
+	}
+
+	private void addHeadersToHttpPost(Map<String, Object> headesParts, HttpPost httpPost) {
+		HeaderCleaner.removeTechnicalHeaders(headesParts);
+
+		headesParts.forEach((name, value) -> {
+			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
+				if (value != null) {
+					httpPost.setHeader(name, value.toString());
+				} else {
+					httpPost.setHeader(name, null);
+				}
+
+			}
+		});
 	}
 
 	private CloseableHttpClient getHttpClient() {
@@ -204,18 +301,33 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 			}else { 
 				logger.info("data sent to destination: "+openApiDataAppAddress);
 				logger.info("Successful response: "+ responseString);
-				//Save original Header for Usage Control Enforcement
+
+				exchange.getOut().setHeaders(returnHeadersAsMap(response.getAllHeaders()));
+				String payload;
+				if (!openDataAppReceiverRouter.equals("http-header")) {
+					String header = multipartMessageService.getHeaderContentString(responseString);
+					payload = multipartMessageService.getPayloadContent(responseString);
+					exchange.getOut().setHeader("header", header);
+					if(payload!=null) {
+						exchange.getOut().setHeader("payload", payload);
+					}
+				}else {
+					payload = responseString;
+				}
 				if(isEnabledUsageControl) {
 					exchange.getOut().setHeader("Original-Message-Header", originalHeader);
 				}
-				String	header = multipartMessageService.getHeaderContentString(responseString);
-				String payload = multipartMessageService.getPayloadContent(responseString);
-				exchange.getOut().setHeader("header", header);
-				if(payload!=null) {
-					exchange.getOut().setHeader("payload", payload);
-				}
+				exchange.getOut().setBody(payload);
 			}
 		}
+	}
+	
+	 private Map<String, Object> returnHeadersAsMap(Header[] allHeaders) {
+	    	Map<String, Object> headersMap = new HashMap<>();
+	    	for (Header header : allHeaders) {
+				headersMap.put(header.getName(), header.getValue());
+			}
+	    	return headersMap;
 	}
 
 }

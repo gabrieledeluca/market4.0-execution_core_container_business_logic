@@ -1,15 +1,5 @@
 package it.eng.idsa.businesslogic.routes;
 
-import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
-import it.eng.idsa.businesslogic.processor.exception.ExceptionForProcessor;
-import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorConsumer;
-import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorProducer;
-import it.eng.idsa.businesslogic.processor.producer.*;
-import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateDeleteMessageProcessor;
-import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreatePassivateMessageProcessor;
-import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateRegistrationMessageProcessor;
-import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateUpdateMessageProcessor;
-
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -17,6 +7,29 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
+import it.eng.idsa.businesslogic.processor.exception.ExceptionForProcessor;
+import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorConsumer;
+import it.eng.idsa.businesslogic.processor.exception.ExceptionProcessorProducer;
+import it.eng.idsa.businesslogic.processor.producer.ProducerFileRecreatorProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerGetTokenFromDapsProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedDataFromDAppProcessorBodyBinary;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedDataProcessorBodyBinary;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedDataProcessorBodyFormData;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedDataProcessorHttpHeader;
+import it.eng.idsa.businesslogic.processor.producer.ProducerParseReceivedResponseMessage;
+import it.eng.idsa.businesslogic.processor.producer.ProducerProcessRegistrationResponseProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerSendDataToBusinessLogicProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerSendRegistrationRequestProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerSendResponseToDataAppProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerSendTransactionToCHProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerUsageControlProcessor;
+import it.eng.idsa.businesslogic.processor.producer.ProducerValidateTokenProcessor;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateDeleteMessageProcessor;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreatePassivateMessageProcessor;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateRegistrationMessageProcessor;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateUpdateMessageProcessor;
 
 /**
  *
@@ -40,6 +53,9 @@ public class CamelRouteProducer extends RouteBuilder {
 
 	@Autowired
 	ProducerParseReceivedDataProcessorBodyFormData parseReceivedDataProcessorBodyFormData;
+	
+	@Autowired
+	ProducerParseReceivedDataProcessorHttpHeader parseReceivedDataProcessorHttpHeader;
 
 	@Autowired
 	ProducerGetTokenFromDapsProcessor getTokenFromDapsProcessor;
@@ -73,7 +89,10 @@ public class CamelRouteProducer extends RouteBuilder {
 
 	@Autowired
 	CamelContext camelContext;
-
+	
+	@Autowired
+	private ProducerCreateRegistrationMessageProcessor createRegitratioMessageProducer;
+	
 	@Autowired
 	private ProducerCreateRegistrationMessageProcessor createRegistratioMessageProducer;
 	@Autowired

@@ -12,12 +12,14 @@ import java.util.regex.Pattern;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.ParseException;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.entity.mime.content.ContentBody;
@@ -35,8 +37,10 @@ import it.eng.idsa.businesslogic.configuration.WebSocketClientConfiguration;
 import it.eng.idsa.businesslogic.processor.producer.websocket.client.FileStreamingBean;
 import it.eng.idsa.businesslogic.processor.producer.websocket.client.IdscpClientBean;
 import it.eng.idsa.businesslogic.processor.producer.websocket.client.MessageWebSocketOverHttpSender;
+import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.businesslogic.util.communication.HttpClientGenerator;
 import it.eng.idsa.businesslogic.util.config.keystore.AcceptAllTruststoreConfig;
@@ -68,12 +72,21 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     @Value("${camel.component.jetty.use-global-ssl-context-parameters}")
     private boolean isJettySSLEnabled;
 
+    @Value("${application.isEnabledDapsInteraction}")
+   	private boolean isEnabledDapsInteraction;
+       
+   	@Value("${application.openDataAppReceiverRouter}")
+   	private String openDataAppReceiverRouter;
+       
     @Autowired
     private MultipartMessageService multipartMessageService;
 
     @Autowired
     private RejectionMessageService rejectionMessageService;
 
+    @Autowired
+    private HttpHeaderService headerService;
+    
     @Autowired
     private WebSocketClientConfiguration webSocketClientConfiguration;
 
@@ -87,28 +100,38 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
 
         Map<String, Object> headesParts = exchange.getIn().getHeaders();
-        Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
 
         String messageWithToken = null;
 
+        String header = null;
+        String payload = null;
+        Message message = null;
+        
+        String multipartMessageString = null;
+		if (eccHttpSendRouter.equals("http-header")) {
+			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headesParts);
+			payload = exchange.getIn().getBody(String.class);
+		}else {
+			Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
         // Get parts of the Multipart message
         if (Boolean.parseBoolean(headesParts.get("Is-Enabled-Daps-Interaction").toString())) {
             messageWithToken = multipartMessageParts.get("messageWithToken").toString();
         }
-        String header = multipartMessageParts.get("header").toString();
-        String payload = null;
+			header = multipartMessageParts.get("header").toString();
+			payload = null;
         if (multipartMessageParts.containsKey("payload")) {
             payload = multipartMessageParts.get("payload").toString();
         }
-        String forwardTo = headesParts.get("Forward-To").toString();
-        Message message = multipartMessageService.getMessage(header);
+			
+		}
+		
+		message = multipartMessageService.getMessage(header);
+		MultipartMessage multipartMessage = new MultipartMessageBuilder().withHeaderContent(header)
+				.withPayloadContent(payload).build();
+		multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage);
         
-        MultipartMessage multipartMessage = new MultipartMessageBuilder()
-    			.withHeaderContent(header)
-    			.withPayloadContent(payload)
-    			.build();
-        String multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage);
-
+        String forwardTo = headesParts.get("Forward-To").toString();
+        
         if (isEnabledIdscp) {
             // check & exstract IDSCP WebSocket IP and Port
             try {
@@ -155,7 +178,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
                     messageWithToken,
                     header,
                     payload,
-                    forwardTo
+                    forwardTo,
+                    message
             );
             // Handle response
             this.handleResponse(exchange, message, response, forwardTo, multipartMessageString);
@@ -168,23 +192,29 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
     }
 
     private CloseableHttpResponse sendMultipartMessage(
-            Map<String, Object> headesParts,
+            Map<String, Object> headerParts,
             String messageWithToken,
             String header,
             String payload,
-            String forwardTo) throws IOException, KeyManagementException,
+            String forwardTo, 
+            Message message) throws IOException, KeyManagementException,
             NoSuchAlgorithmException, InterruptedException, ExecutionException, UnsupportedEncodingException {
         CloseableHttpResponse response = null;
-        Message message = multipartMessageService.getMessage(header);
+//        Message message = multipartMessageService.getMessage(header);
         // -- Send message using HTTPS
-        if (Boolean.parseBoolean(headesParts.get("Is-Enabled-Daps-Interaction").toString())) {
+        if (Boolean.parseBoolean(headerParts.get("Is-Enabled-Daps-Interaction").toString())) {
         	switch(eccHttpSendRouter) {
         	case "mixed": {
-        		response = this.forwardMessageBinary(forwardTo, messageWithToken, payload);
+        		response = this.forwardMessageBinary(forwardTo, messageWithToken, payload, headerParts);
         		break;
         	}
         	case "form": {
-        		response = this.forwardMessageFormData(forwardTo, messageWithToken, payload);
+        		response = this.forwardMessageFormData(forwardTo, messageWithToken, payload, headerParts);
+        		break;
+        	}
+        	case "http-header":
+        	{
+    			response =  this.forwardMessageHttpHeader(forwardTo, payload, headerParts);
         		break;
         	}
         	default:
@@ -196,11 +226,16 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         } else {
         	switch(eccHttpSendRouter) {
         	case "mixed": {
-        		response = forwardMessageBinary(forwardTo, header, payload);
+        		response = forwardMessageBinary(forwardTo, header, payload, headerParts);
         		break;
         	}
         	case "form": {
-        		response = this.forwardMessageFormData(forwardTo, header, payload);
+        		response = this.forwardMessageFormData(forwardTo, header, payload, headerParts);
+        		break;
+        	}
+        	case "http-header":
+        	{
+    			response =  this.forwardMessageHttpHeader(forwardTo, payload, headerParts);
         		break;
         	}
         	default:
@@ -213,7 +248,56 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
         return response;
     }
 
-    private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload) throws UnsupportedEncodingException {
+    private CloseableHttpResponse forwardMessageHttpHeader(String address, String payload, Map<String, Object> headerParts) throws IOException {
+		logger.info("Forwarding Message: Body: http-header");
+		
+		// Set F address
+		HttpPost httpPost = new HttpPost(address);
+
+		// Add header message part to the http headers
+//		if (isEnabledDapsInteraction) {
+//			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithToken(header));
+//		}else {
+//			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithoutToken(header));
+//		}
+		
+		addHeadersToHttpPost(httpPost, headerParts);
+		
+		if (payload != null) {
+			StringEntity payloadEntity = new StringEntity(payload);
+			httpPost.setEntity(payloadEntity);
+		}
+		CloseableHttpResponse response;
+
+		try {
+			response = getHttpClient().execute(httpPost);
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+
+		return response;
+	}
+
+	private void addHeadersToHttpPost(HttpPost httpPost, Map<String, Object> headerParts) {
+		headerParts.forEach((name, value) -> {
+			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
+				if (value != null) {
+					httpPost.addHeader(name, value.toString());
+				} else {
+					httpPost.addHeader(name, null);
+				}
+			}
+		});
+		
+	}
+
+	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload, Map<String, Object> headerParts) throws UnsupportedEncodingException {
         logger.info("Forwarding Message: Body: binary");
 
         // Covert to ContentBody
@@ -248,13 +332,29 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 
         return response;
     }
-    
-    private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload) throws ClientProtocolException, IOException {
+
+	private void addHeadersToHttpPost(Map<String, Object> headesParts, HttpPost httpPost) {
+		HeaderCleaner.removeTechnicalHeaders(headesParts);
+		
+		headesParts.forEach((name, value) -> {
+			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
+				if (value != null) {
+					httpPost.setHeader(name, value.toString());
+				} else {
+					httpPost.setHeader(name, null);
+				}
+
+			}
+		});
+	}
+
+	private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload,
+			Map<String, Object> headesParts) throws ClientProtocolException, IOException {
 		logger.info("Forwarding Message: Body: form-data");
 
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
-
+		addHeadersToHttpPost(headesParts, httpPost);
 		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
 		httpPost.setEntity(reqEntity);
 
@@ -269,7 +369,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		return response;
 	}
 
-    private ContentBody convertToContentBody(String value, ContentType contentType, String valueName) throws UnsupportedEncodingException {
+	private ContentBody convertToContentBody(String value, ContentType contentType, String valueName)
+			throws UnsupportedEncodingException {
         byte[] valueBiteArray = value.getBytes("utf-8");
         ContentBody cbValue = new ByteArrayBody(valueBiteArray, contentType, valueName);
         return cbValue;
@@ -312,11 +413,20 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
                 logger.info("Successful response: " + responseString);
                 // TODO:
                 // Set original body which is created using the original payload and header
+                exchange.getOut().setHeaders(returnHeadersAsMap(response.getAllHeaders()));
                 exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
                 exchange.getOut().setBody(responseString);
             }
         }
     }
+
+    private Map<String, Object> returnHeadersAsMap(Header[] allHeaders) {
+    	Map<String, Object> headersMap = new HashMap<>();
+    	for (Header header : allHeaders) {
+			headersMap.put(header.getName(), header.getValue());
+		}
+    	return headersMap;
+	}
 
     private void handleResponseWebSocket(Exchange exchange, Message message, String responseString, String forwardTo, String multipartMessageBody) {
         if (responseString == null) {
@@ -330,6 +440,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
             logger.info("Successful response: " + responseString);
             // TODO:
             // Set original body which is created using the original payload and header 
+            exchange.getOut().setHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
             exchange.getOut().setBody(responseString);
         }
