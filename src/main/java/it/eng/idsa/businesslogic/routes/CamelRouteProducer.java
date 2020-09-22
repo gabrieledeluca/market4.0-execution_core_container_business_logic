@@ -118,6 +118,8 @@ public class CamelRouteProducer extends RouteBuilder {
 			
 		from("direct:registrationProcess")
             .process(sendRegistrationRequestProcessor)
+            //TODO following processor is workaround 
+            // to remove Content-Type from response in order to be able to Serialize it correct
 			.process(processRegistrationResponseProducer)
 			.process(parseReceivedResponseMessage)
 			.process(sendResponseToDataAppProcessor);

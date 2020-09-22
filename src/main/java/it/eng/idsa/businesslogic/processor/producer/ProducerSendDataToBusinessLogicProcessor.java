@@ -298,7 +298,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
             logger.info("status code of the response message is: " + statusCode);
             if (statusCode >= 300) {
                 if (statusCode == 404) {
-                    logger.info("...communication error - bad forwardTo URL" + forwardTo);
+                    logger.info("...communication error - bad forwardTo URL " + forwardTo);
                     rejectionMessageService.sendRejectionMessage(
                             RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
                             message);
