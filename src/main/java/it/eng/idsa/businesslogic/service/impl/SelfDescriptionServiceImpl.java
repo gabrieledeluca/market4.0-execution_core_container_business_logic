@@ -26,9 +26,12 @@ import de.fraunhofer.iais.eis.Connector;
 import de.fraunhofer.iais.eis.ConnectorUnavailableMessageBuilder;
 import de.fraunhofer.iais.eis.ConnectorUpdateMessageBuilder;
 import de.fraunhofer.iais.eis.ContractOffer;
+import de.fraunhofer.iais.eis.ContractOfferBuilder;
 import de.fraunhofer.iais.eis.DynamicAttributeToken;
 import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder;
 import de.fraunhofer.iais.eis.Message;
+import de.fraunhofer.iais.eis.Permission;
+import de.fraunhofer.iais.eis.PermissionBuilder;
 import de.fraunhofer.iais.eis.Resource;
 import de.fraunhofer.iais.eis.ResourceBuilder;
 import de.fraunhofer.iais.eis.ResourceCatalog;
@@ -39,6 +42,7 @@ import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
 import de.fraunhofer.iais.eis.util.ConstraintViolationException;
 import de.fraunhofer.iais.eis.util.TypedLiteral;
 import de.fraunhofer.iais.eis.util.Util;
+import edu.emory.mathcs.backport.java.util.Arrays;
 import it.eng.idsa.businesslogic.service.DapsService;
 import it.eng.idsa.businesslogic.service.SelfDescriptionService;
 
@@ -116,7 +120,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		return result;
 	}
 
-	private Resource getResource() {
+	private Resource getResource() throws ConstraintViolationException, URISyntaxException {
 		Resource offeredResource = (new ResourceBuilder())
 				._title_(Util.asList(new TypedLiteral(this.resourceTitle, this.resourceLang)))
 				._description_(Util.asList(new TypedLiteral(this.resourceDescription, this.resourceLang)))
@@ -124,24 +128,31 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		return offeredResource;
 	}
 
-	// TODO
-	private ArrayList<ContractOffer> getContractOffers() {
-		try {
-			File file = new File(this.getClass().getClassLoader().getResource("contract-offers.json").getFile());
-			Path filePath = Path.of(file.getAbsolutePath());
-			ContractOffer contractOffer = new Serializer().deserialize(Files.readString(filePath), ContractOffer.class);
+	// TODO could not load contract-offers.json file from cmd
+	private ArrayList<ContractOffer> getContractOffers() throws ConstraintViolationException, URISyntaxException {
+//		try {
+//			File file = new File(this.getClass().getClassLoader().getResource("contract-offers.json").getFile());
+//			Path filePath = Path.of(file.getAbsolutePath());
+//			logger.info("aaaaaaaaaaaaa {}", filePath.toString());
+//			ContractOffer contractOffer = new Serializer().deserialize(Files.readString(filePath), ContractOffer.class);
+		Permission permission = new PermissionBuilder(new URI("http://example.com/ids-profile/12344")).build();
+			ContractOffer contractOffer = new ContractOfferBuilder(new URI("http://example.com/ids-profile/1234"))
+					._provider_(new URI("http://example.com/party/my-party"))
+					._permission_(Util.asList(permission))
+					.build();
+			
 			ArrayList<ContractOffer> contractOfferList = new ArrayList<>();
 			contractOfferList.add(contractOffer);
 			return contractOfferList;
-		} catch (IOException e) {
-			logger.error("Error in SelfDescriptionService while retrieving contract-offers.json with message: "
-					+ e.getMessage());
-		}
-		return null;
+//		} catch (IOException e) {
+//			logger.error("Error in SelfDescriptionService while retrieving contract-offers.json with message: "
+//					+ e.getMessage());
+//		}
+//		return null;
 	}
 
 //	// Infomodel version 4.0.0
-	private java.util.List<ResourceCatalog> getCatalog() {
+	private java.util.List<ResourceCatalog> getCatalog() throws ConstraintViolationException, URISyntaxException {
 		ResourceCatalog catalog = (new ResourceCatalogBuilder()
 				._offeredResource_(Util.asList(new Resource[] { this.getResource() })).build());
 		java.util.List<ResourceCatalog> catalogList = new ArrayList<>();
