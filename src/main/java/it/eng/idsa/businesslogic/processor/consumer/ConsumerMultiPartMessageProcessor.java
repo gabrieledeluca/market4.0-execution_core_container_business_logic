@@ -98,14 +98,13 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 				}
 
 				// Return exchange
-				exchange.getOut().setHeaders(headesParts);
 				exchange.getOut().setBody(multipartMessageParts);
 
 			} catch (Exception e) {
 				logger.error("Error parsing multipart message:", e);
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
-			exchange.getOut().setHeaders(headesParts);
 		}
+		exchange.getOut().setHeaders(headesParts);
 	}
 }
