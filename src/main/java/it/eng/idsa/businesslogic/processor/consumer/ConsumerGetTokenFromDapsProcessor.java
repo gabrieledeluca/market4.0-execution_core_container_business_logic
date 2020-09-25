@@ -72,12 +72,12 @@ public class ConsumerGetTokenFromDapsProcessor implements Processor{
 					message);
 		}
 		
-		if (message==null) {
-			logger.error("Parsed multipart message is null");
-			rejectionMessageService.sendRejectionMessage(
-					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
-					message);
-		}
+//		if (message==null) {
+//			logger.error("Parsed multipart message is null");
+//			rejectionMessageService.sendRejectionMessage(
+//					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
+//					message);
+//		}
 		
 		// Get the Token from the DAPS
 		String token="";

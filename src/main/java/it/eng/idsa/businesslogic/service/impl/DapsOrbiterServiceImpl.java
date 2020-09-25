@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
@@ -14,6 +15,7 @@ import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.UnrecoverableKeyException;
@@ -21,9 +23,12 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -35,6 +40,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONObject;
@@ -57,6 +63,9 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import it.eng.idsa.businesslogic.service.DapsService;
 import it.eng.idsa.businesslogic.util.ProxyAuthenticator;
 import okhttp3.Authenticator;
@@ -113,9 +122,16 @@ public class DapsOrbiterServiceImpl implements DapsService {
 
     @Value("${application.dapsJws}")
     private String dapsJws;
+    
+    @Value("${application.daps.orbiter.privateKey}")
+    private String dapsOrbiterPrivateKey;
+    @Value("${application.daps.orbiter.certificate}")
+    private String dapsOrbiterCertificate; 
+    @Value("${application.daps.orbiter.password}")
+    private String dapsOrbiterPassword;
+
 
     @Override
-
     public String getJwtToken() {
 
         String dynamicAttributeToken = "INVALID_TOKEN";
@@ -247,8 +263,8 @@ public class DapsOrbiterServiceImpl implements DapsService {
 
             // create signed JWT (JWS)
             // Create expiry date one day (86400 seconds) from now
-            //Date expiryDate = Date.from(Instant.now().plusSeconds(86400));
-            /*JwtBuilder jwtb =
+            Date expiryDate = Date.from(Instant.now().plusSeconds(86400));
+            JwtBuilder jwtb =
                     Jwts.builder()
                             .setIssuer(connectorUUID)
                             .setSubject(connectorUUID)
@@ -257,16 +273,16 @@ public class DapsOrbiterServiceImpl implements DapsService {
                             .setExpiration(expiryDate)
                             .setIssuedAt(Date.from(Instant.now()))
                             .setAudience(targetAudience)
-                            .setNotBefore(Date.from(Instant.now()));*/
+                            .setNotBefore(Date.from(Instant.now()));
             //String jws = jwtb.signWith(privKey, SignatureAlgorithm.RS256).compact();
-            //String jws = jwtb.signWith(SignatureAlgorithm.RS256, privKey).compact();
-            logger.info("Request token: " + dapsJws);
+            String jws = jwtb.signWith(SignatureAlgorithm.RS256, getOrbiterPrivateKey()).compact();
+            logger.info("Request token: " + jws);
 
             // build form body to embed client assertion into post request
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("grant_type", "client_credentials");
             jsonObject.put("client_assertion_type", "jwt-bearer");
-            jsonObject.put("client_assertion", dapsJws);
+            jsonObject.put("client_assertion", jws);
             jsonObject.put("scope", "all");
             String jsonString = jsonObject.toString();
             RequestBody formBody = RequestBody.create(JSON, jsonString); // new
@@ -510,5 +526,28 @@ public class DapsOrbiterServiceImpl implements DapsService {
         }
         return hexStringBuffer.toString();
     }
-
+    
+	/**
+	 * Reads Orbiter private key from file, removes header and footer and creates java PrivateKey object
+	 * @return
+	 * @throws IOException
+	 * @throws GeneralSecurityException
+	 */
+	private PrivateKey getOrbiterPrivateKey() throws IOException, GeneralSecurityException {
+		InputStream orbiterPrivateKeyInputStream = null;
+		try {
+			orbiterPrivateKeyInputStream = Files.newInputStream(targetDirectory.resolve(dapsOrbiterPrivateKey));
+			String privateKeyPEM = IOUtils.toString(orbiterPrivateKeyInputStream, StandardCharsets.UTF_8.name());
+			privateKeyPEM = privateKeyPEM.replace("-----BEGIN PRIVATE KEY-----\n", "");
+			privateKeyPEM = privateKeyPEM.replace("-----END PRIVATE KEY-----", "");
+			byte[] encoded = org.apache.commons.codec.binary.Base64.decodeBase64(privateKeyPEM);
+			KeyFactory kf = KeyFactory.getInstance("RSA");
+			PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
+			return (PrivateKey) kf.generatePrivate(keySpec);
+		} finally {
+			if(orbiterPrivateKeyInputStream != null) {
+				orbiterPrivateKeyInputStream.close();
+			}
+		}
+	}
 }
