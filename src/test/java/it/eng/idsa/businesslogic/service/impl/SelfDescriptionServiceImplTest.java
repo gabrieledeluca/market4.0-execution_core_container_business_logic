@@ -67,7 +67,7 @@ public class SelfDescriptionServiceImplTest {
 	public void getConnectionString() {
 		String connectionString = selfDefinitionService.getConnectorAsString();
 		assertNotNull(connectionString);
-		System.out.println(connectionString);
+//		System.out.println(connectionString);
 
 		assertTrue(connectionString.contains("ids:BaseConnector"));
 		assertTrue(connectionString.contains("ids:outboundModelVersion"));
@@ -87,8 +87,8 @@ public class SelfDescriptionServiceImplTest {
 		Message availabilityMessage = selfDefinitionService.getConnectorAvailbilityMessage();
 		assertNotNull(availabilityMessage);
 		assertNotNull(availabilityMessage.getSecurityToken());
-		String ss = geObjectAsString(availabilityMessage);
-		System.out.println(ss);
+//		String ss = geObjectAsString(availabilityMessage);
+//		System.out.println(ss);
 	}
 	
 	@Test
@@ -112,6 +112,7 @@ public class SelfDescriptionServiceImplTest {
 		assertNotNull(unavailableMessage);
 	}
 	
+	@SuppressWarnings("unused")
 	private String geObjectAsString(Object toSerialize) {
 		final Serializer serializer = new Serializer();
 		String result = null;

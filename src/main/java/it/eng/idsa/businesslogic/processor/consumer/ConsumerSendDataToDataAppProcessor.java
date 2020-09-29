@@ -93,13 +93,13 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		if (!eccHttpSendRouter.equals("http-header")) {
 			multipartMessageParts = exchange.getIn().getBody(HashMap.class);
 			header = filterHeader(multipartMessageParts.get("header").toString());
-			payload = null;
 		if(multipartMessageParts.containsKey("payload")) {
 			payload = multipartMessageParts.get("payload").toString();
 		}
 			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
 		} else {
 			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headerParts);
+			headerService.removeTokenHeaders(headerParts);
 			payload = exchange.getIn().getBody(String.class);
 		}
 
@@ -145,7 +145,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
 		
-		addHeadersToHttpPost(httpPost, headerParts);
+		addHeadersToHttpPost(headerParts, httpPost);
 		
 		if (payload != null) {
 			StringEntity payloadEntity = new StringEntity(payload);
@@ -167,21 +167,6 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 		return response;
 	}
-
-
-	private void addHeadersToHttpPost(HttpPost httpPost, Map<String, Object> headerParts) {
-		headerParts.forEach((name, value) -> {
-			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
-				if (value != null) {
-					httpPost.addHeader(name, value.toString());
-				} else {
-					httpPost.addHeader(name, null);
-				}
-			}
-		});
-		
-	}
-
 
 	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload,
 			Map<String, Object> headerParts) throws ClientProtocolException, IOException {

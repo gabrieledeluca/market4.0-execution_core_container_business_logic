@@ -36,11 +36,11 @@ public class RejectionMessageServiceImplTest {
 
 	@BeforeEach
 	public void init() {
+		rejectionMessageServiceImpl.setInformationModelVersion("4.0.0");
 		String fraunhoferMessageAsString = null;
 		try {
 			fraunhoferMessageAsString = new String(Files.readAllBytes(Paths.get(directory + "fraunhoferMessageAsString.txt")));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		message = multipartMessageServiceImpl.getMessage(fraunhoferMessageAsString);
@@ -54,7 +54,6 @@ public class RejectionMessageServiceImplTest {
 				() -> rejectionMessageServiceImpl.sendRejectionMessage(RejectionMessageType.RESULT_MESSAGE, message));
 		String message = exception.getMessage();
 		
-//		assertFalse(message.contains(rejectionReasonTemplate));
 		assertTrue(message.contains(IDS_PREFIX + tokenRejectionMessage));
 	}
 
@@ -65,7 +64,6 @@ public class RejectionMessageServiceImplTest {
 				() -> rejectionMessageServiceImpl.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message));
 		String message = exception.getMessage();
 		
-//		assertTrue(message.contains(rejectionReasonTemplate));
 		assertTrue(message.contains(messageRejectionMessage));
 	}
 	
@@ -77,7 +75,6 @@ public class RejectionMessageServiceImplTest {
 				() -> rejectionMessageServiceImpl.sendRejectionMessage(RejectionMessageType.REJECTION_TOKEN, message));
 		String message = exception.getMessage();
 		
-//		assertTrue(message.contains(rejectionReasonTemplate));
 		assertTrue(message.contains(IDS_PREFIX + tokenRejectionMessage));
 	}
 	
@@ -88,7 +85,6 @@ public class RejectionMessageServiceImplTest {
 				() -> rejectionMessageServiceImpl.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, message));
 		String message = exception.getMessage();
 		
-//		assertTrue(message.contains(rejectionReasonTemplate));
 		assertTrue(message.contains(IDS_PREFIX + messageRejectionMessage));
 	}
 	
@@ -99,7 +95,6 @@ public class RejectionMessageServiceImplTest {
 				() -> rejectionMessageServiceImpl.sendRejectionMessage(RejectionMessageType.REJECTION_TOKEN_LOCAL_ISSUES, message));
 		String message = exception.getMessage();
 		
-//		assertTrue(message.contains(rejectionReasonTemplate));
 		assertTrue(message.contains(IDS_PREFIX + tokenRejectionMessage));
 
 	}
@@ -111,7 +106,6 @@ public class RejectionMessageServiceImplTest {
 				() -> rejectionMessageServiceImpl.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES, message));
 		String message = exception.getMessage();
 		
-//		assertTrue(message.contains(rejectionReasonTemplate));
 		assertTrue(message.contains(IDS_PREFIX + communicationRejetionMessage));
 	}
 }

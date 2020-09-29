@@ -50,8 +50,8 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		return tokenAsMap;
 	}
 	
-	private void removeTokenHeaders(Map<String, Object> headers) {
-
+	@Override
+	public void removeTokenHeaders(Map<String, Object> headers) {
 		headers.remove("IDS-SecurityToken-Type");
 		headers.remove("IDS-SecurityToken-Id");
 		headers.remove("IDS-SecurityToken-TokenFormat");
