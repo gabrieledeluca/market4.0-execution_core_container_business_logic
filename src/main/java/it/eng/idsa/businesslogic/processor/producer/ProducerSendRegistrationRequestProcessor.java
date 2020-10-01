@@ -1,12 +1,21 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -14,14 +23,19 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
@@ -47,11 +61,12 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 	   
 	@Override
 	public void process(Exchange exchange) throws Exception {
-
 		Map<String, Object> headesParts = exchange.getIn().getHeaders();
 		Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
 		String forwardTo = headesParts.get("Forward-To").toString();
 
+		logger.info("About to send request towards broker... '{}'", forwardTo);
+		
 		String header = multipartMessageParts.get("header").toString();
 		String payload = null;
 		if (multipartMessageParts.containsKey("payload")) {
@@ -128,13 +143,51 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 		return cbValue;
 	}
 
-	private CloseableHttpClient getHttpClient() {
-		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
+	private CloseableHttpClient getHttpClient() throws IOException {
+//		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
+//
+//		CloseableHttpClient httpClient = HttpClientGenerator.get(config, true);
+//		logger.warn("Created Accept-All Http Client");
+		logger.info("Creating custom http client with broker certificate");
+		InputStream is = null;
+		try {
+			is = new ClassPathResource("broker_cert.cer").getInputStream();
 
-		CloseableHttpClient httpClient = HttpClientGenerator.get(config, true);
-		logger.warn("Created Accept-All Http Client");
+			CertificateFactory cf = CertificateFactory.getInstance("X.509");
+			X509Certificate caCert = (X509Certificate) cf.generateCertificate(is);
 
-		return httpClient;
+			TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+			KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+			ks.load(null); // You don't need the KeyStore instance to come from a file.
+			ks.setCertificateEntry("caCert", caCert);
+
+			tmf.init(ks);
+
+			SSLContext sslContext = SSLContext.getInstance("TLS");
+			sslContext.init(null, tmf.getTrustManagers(), null);
+
+			SSLConnectionSocketFactory sslConSocFactory = new SSLConnectionSocketFactory(sslContext,
+					new NoopHostnameVerifier());
+
+			// Creating HttpClientBuilder
+			HttpClientBuilder clientbuilder = HttpClients.custom();
+
+			// Setting the SSLConnectionSocketFactory
+			clientbuilder = clientbuilder.setSSLSocketFactory(sslConSocFactory);
+
+			// Building the CloseableHttpClient
+			CloseableHttpClient httpclient = clientbuilder.build();
+			return httpclient;
+		} catch(CertificateException | NoSuchAlgorithmException | KeyStoreException | IOException |
+				KeyManagementException ex) {
+			logger.error("Exception {}", ex);
+		}
+		finally {
+			if (is != null) {
+				is.close();
+			}
+		}
+		return null;
 	}
 
 	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String forwardTo, String multipartMessageBody) throws UnsupportedOperationException, IOException {

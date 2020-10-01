@@ -16,14 +16,12 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
@@ -44,7 +42,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -76,12 +73,8 @@ public class DapsOrbiterServiceImpl implements DapsService {
 
     private static final Logger logger = LogManager.getLogger(DapsServiceImpl.class);
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    private Key privKey;
-    private Certificate cert;
 
     private String token = "";
-    private SSLSocketFactory sslSocketFactory = null;
-
     @Value("${application.targetDirectory}")
     private Path targetDirectory;
     @Value("${application.dapsUrl}")
@@ -119,10 +112,7 @@ public class DapsOrbiterServiceImpl implements DapsService {
     @Override
     public String getJwtToken() {
 
-        String dynamicAttributeToken = "INVALID_TOKEN";
         String targetAudience = "idsc:IDS_CONNECTORS_ALL";
-
-        Map<String, Object> jwtClaims = null;
 
         // Try clause for setup phase (loading keys, building trust manager)
         try {
@@ -162,7 +152,7 @@ public class DapsOrbiterServiceImpl implements DapsService {
                 }
                 SSLContext sslContext = SSLContext.getInstance("TLS");
                 sslContext.init(null, trustManagers, null);
-                sslSocketFactory = sslContext.getSocketFactory();
+                sslContext.getSocketFactory();
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException(e);
             }
@@ -326,8 +316,11 @@ public class DapsOrbiterServiceImpl implements DapsService {
 
 	private OkHttpClient createHttpClient(final TrustManager[] trustAllCerts, final SSLSocketFactory sslSocketFactory) {
 		OkHttpClient client;
-		client = new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS)
-		        .writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
+		//@formatter:off
+		client = new OkHttpClient.Builder()
+				.connectTimeout(60, TimeUnit.SECONDS)
+		        .writeTimeout(60, TimeUnit.SECONDS)
+		        .readTimeout(60, TimeUnit.SECONDS)
 		        .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
 		        .hostnameVerifier(new HostnameVerifier() {
 		            @Override
@@ -335,6 +328,7 @@ public class DapsOrbiterServiceImpl implements DapsService {
 		                return true;
 		            }
 		        }).build();
+		//@formatter:on
 		return client;
 	}
 
@@ -346,11 +340,10 @@ public class DapsOrbiterServiceImpl implements DapsService {
     public boolean validateToken(String tokenValue) {
         boolean isValid = false;
 
-        logger.debug("Get properties");
+        logger.debug("Validating Orbiter token");
         OkHttpClient client = null;
         
 		try {
-			final TrustManager[] trustAllCerts = createTrustCertificates();
 
 			JSONObject jsonObject = new JSONObject();
             jsonObject.put("token", tokenValue);
@@ -367,8 +360,10 @@ public class DapsOrbiterServiceImpl implements DapsService {
 					.build();
 			//@formatter:on
 			
+			final TrustManager[] trustAllCerts = createTrustCertificates();
 			final SSLSocketFactory sslSocketFactory = sslSocketFactory(trustAllCerts);
 			client = createHttpClient(trustAllCerts, sslSocketFactory);
+
 			Response jwtResponse = client.newCall(requestDaps).execute();
 			
 			ResponseBody responseBody = jwtResponse.body();

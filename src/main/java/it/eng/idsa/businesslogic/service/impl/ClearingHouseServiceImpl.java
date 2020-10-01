@@ -3,12 +3,10 @@
  */
 package it.eng.idsa.businesslogic.service.impl;
 
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
-import java.util.Properties;
 import java.util.UUID;
 
 import javax.xml.datatype.DatatypeFactory;
@@ -16,12 +14,10 @@ import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.apache.maven.project.MavenProject;
 import org.json.simple.JsonObject;
 import org.json.simple.Jsoner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -46,11 +42,13 @@ import it.eng.idsa.clearinghouse.model.NotificationContent;
 @Service
 @Transactional
 public class ClearingHouseServiceImpl implements ClearingHouseService {
+	private static final Logger logger = LogManager.getLogger(ClearingHouseServiceImpl.class);
+
 	@Autowired
 	private ApplicationConfiguration configuration;
-
-	private static final Logger logger = LogManager.getLogger(ClearingHouseServiceImpl.class);
-	private final static String informationModelVersion = getInformationModelVersion();
+	
+	@Value("${information.model.version}")
+	private String informationModelVersion;
 
 	private static URI connectorURI;
 
@@ -59,7 +57,6 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 
 	@Override
 	public boolean registerTransaction(Message correlatedMessage, String payload) {
-		// TODO Auto-generated method stub
 		try {
 			logger.debug("registerTransaction...");
 			try {
@@ -123,38 +120,37 @@ public class ClearingHouseServiceImpl implements ClearingHouseService {
 		return false;
 	}
 
-	private static String getInformationModelVersion() {
-		String currnetInformationModelVersion = null;
-		try {
-
-			InputStream is = RejectionMessageServiceImpl.class.getClassLoader().getResourceAsStream(
-					"META-INF/maven/it.eng.idsa/market4.0-execution_core_container_business_logic/pom.xml");
-			MavenXpp3Reader reader = new MavenXpp3Reader();
-			Model model = reader.read(is);
-			MavenProject project = new MavenProject(model);
-			Properties props = project.getProperties();
-			if (props.get("information.model.version") != null) {
-				return props.get("information.model.version").toString();
-			}
-			for (int i = 0; i < model.getDependencies().size(); i++) {
-				if (model.getDependencies().get(i).getGroupId()
-						.equalsIgnoreCase("de.fraunhofer.iais.eis.ids.infomodel")) {
-					String version = model.getDependencies().get(i).getVersion();
-					// If we want, we can delete "-SNAPSHOT" from the version
-					// if (version.contains("-SNAPSHOT")) {
-					// version=version.substring(0,version.indexOf("-SNAPSHOT"));
-					// }
-					currnetInformationModelVersion = version;
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return currnetInformationModelVersion;
-	}
+//	private static String getInformationModelVersion() {
+//		String currnetInformationModelVersion = null;
+//		try {
+//
+//			InputStream is = RejectionMessageServiceImpl.class.getClassLoader().getResourceAsStream(
+//					"META-INF/maven/it.eng.idsa/market4.0-execution_core_container_business_logic/pom.xml");
+//			MavenXpp3Reader reader = new MavenXpp3Reader();
+//			Model model = reader.read(is);
+//			MavenProject project = new MavenProject(model);
+//			Properties props = project.getProperties();
+//			if (props.get("information.model.version") != null) {
+//				return props.get("information.model.version").toString();
+//			}
+//			for (int i = 0; i < model.getDependencies().size(); i++) {
+//				if (model.getDependencies().get(i).getGroupId()
+//						.equalsIgnoreCase("de.fraunhofer.iais.eis.ids.infomodel")) {
+//					String version = model.getDependencies().get(i).getVersion();
+//					// If we want, we can delete "-SNAPSHOT" from the version
+//					// if (version.contains("-SNAPSHOT")) {
+//					// version=version.substring(0,version.indexOf("-SNAPSHOT"));
+//					// }
+//					currnetInformationModelVersion = version;
+//				}
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		return currnetInformationModelVersion;
+//	}
 
 	private URI whoIAm() {
-		// TODO
 		return URI.create("auto-generated");
 	}
 
