@@ -71,7 +71,7 @@ import okhttp3.Route;
 @Transactional
 public class DapsOrbiterServiceImpl implements DapsService {
 
-    private static final Logger logger = LogManager.getLogger(DapsServiceImpl.class);
+    private static final Logger logger = LogManager.getLogger(DapsOrbiterServiceImpl.class);
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
     private String token = "";
@@ -187,26 +187,8 @@ public class DapsOrbiterServiceImpl implements DapsService {
                 client = createHttpClient(trustAllCerts, sslSocketFactory);
             }
 
-            // Get AKI
-            //GET 2.5.29.14	SubjectKeyIdentifier / 2.5.29.35	AuthorityKeyIdentifier
-            /*String aki_oid = Extension.authorityKeyIdentifier.getId();
-            byte[] rawAuthorityKeyIdentifier = cert.getExtensionValue(aki_oid);
-            ASN1OctetString akiOc = ASN1OctetString.getInstance(rawAuthorityKeyIdentifier);
-            AuthorityKeyIdentifier aki = AuthorityKeyIdentifier.getInstance(akiOc.getOctets());
-            byte[] authorityKeyIdentifier = aki.getKeyIdentifier();
-            //GET SKI
-            String ski_oid = Extension.subjectKeyIdentifier.getId();
-            byte[] rawSubjectKeyIdentifier = cert.getExtensionValue(ski_oid);
-            ASN1OctetString ski0c = ASN1OctetString.getInstance(rawSubjectKeyIdentifier);
-            SubjectKeyIdentifier ski = SubjectKeyIdentifier.getInstance(ski0c.getOctets());
-            byte[] subjectKeyIdentifier = ski.getKeyIdentifier();
-            String aki_result = beatifyHex(encodeHexString(authorityKeyIdentifier).toUpperCase());
-            String ski_result = beatifyHex(encodeHexString(subjectKeyIdentifier).toUpperCase());
-            String connectorUUID = ski_result + "keyid:" + aki_result.substring(0, aki_result.length() - 1);
-            */
             logger.info("ConnectorUUID: " + connectorUUID);
             logger.info("Retrieving Dynamic Attribute Token...");
-
 
             // create signed JWT (JWS)
             // Create expiry date one day (86400 seconds) from now
@@ -257,15 +239,9 @@ public class DapsOrbiterServiceImpl implements DapsService {
             logger.info("access_token: {}", jwtString);
             logger.info("access_token: {}", jwtResponse.message());
 
-            if (!jwtResponse.isSuccessful())
+            if (!jwtResponse.isSuccessful()) {
                 throw new IOException("Unexpected code " + jwtResponse);
-
-            //JSONObject jsonObject = new JSONObject(jwtString);
-            //dynamicAttributeToken = jsonObject.getString("access_token");
-
-            //logger.info("Dynamic Attribute Token: " + dynamicAttributeToken);
-
-            // jwtClaims = verifyJWT(dynamicAttributeToken, dapsUrl);
+            }
         } catch (KeyStoreException
                 | NoSuchAlgorithmException
                 | CertificateException

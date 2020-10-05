@@ -251,9 +251,10 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 //		}
 
 		addHeadersToHttpPost(headerParts, httpPost);
-
+		
 		if (payload != null) {
-			StringEntity payloadEntity = new StringEntity(payload);
+			StringEntity payloadEntity = new StringEntity(payload, 
+					ContentType.create((String)headerParts.get("Content-Type")));
 			httpPost.setEntity(payloadEntity);
 		}
 		CloseableHttpResponse response;
