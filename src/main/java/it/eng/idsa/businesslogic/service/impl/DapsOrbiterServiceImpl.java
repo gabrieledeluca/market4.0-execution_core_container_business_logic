@@ -2,8 +2,6 @@ package it.eng.idsa.businesslogic.service.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,15 +47,12 @@ import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import it.eng.idsa.businesslogic.service.DapsService;
-import okhttp3.Authenticator;
-import okhttp3.Credentials;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import okhttp3.Route;
 
 /**
  * @author Milan Karajovic and Gabriele De Luca
@@ -87,20 +82,9 @@ public class DapsOrbiterServiceImpl implements DapsService {
     private String keystoreAliasName;
     @Value("${application.connectorUUID}")
     private String connectorUUID;
-    @Value("${application.proxyUser}")
-    private String proxyUser;
-    @Value("${application.proxyPassword}")
-    private String proxyPassword;
-    @Value("${application.proxyHost}")
-    private String proxyHost;
-    @Value("${application.proxyPort}")
-    private String proxyPort;
     @Value("${application.dapsJWKSUrl}")
     private String dapsJWKSUrl;
 
-    @Value("${application.dapsJws}")
-    private String dapsJws;
-    
     @Value("${application.daps.orbiter.privateKey}")
     private String dapsOrbiterPrivateKey;
     @Value("${application.daps.orbiter.certificate}")
@@ -157,35 +141,11 @@ public class DapsOrbiterServiceImpl implements DapsService {
                 throw new RuntimeException(e);
             }
 
-            Authenticator proxyAuthenticator = new Authenticator() {
-                @Override
-                public Request authenticate(Route route, Response response) throws IOException {
-                    String credential = Credentials.basic(proxyUser, proxyPassword);
-                    return response.request().newBuilder().header("Proxy-Authorization", credential).build();
-                }
-            };
-
             OkHttpClient client = null;
             final TrustManager[] trustAllCerts = createTrustCertificates();
             // Install the all-trusting trust manager
             final SSLSocketFactory sslSocketFactory = sslSocketFactory(trustAllCerts);
-            if (!proxyUser.equalsIgnoreCase("")) {
-                client = new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS)
-                        .writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
-                        .proxy(new Proxy(Proxy.Type.HTTP,
-                                new InetSocketAddress(proxyHost, Integer.parseInt(proxyPort))))
-                        .proxyAuthenticator(proxyAuthenticator)
-                        .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
-                        .hostnameVerifier(new HostnameVerifier() {
-                            @Override
-                            public boolean verify(String hostname, SSLSession session) {
-                                // TODO Auto-generated method stub
-                                return true;
-                            }
-                        }).build();
-            } else {
-                client = createHttpClient(trustAllCerts, sslSocketFactory);
-            }
+            client = createHttpClient(trustAllCerts, sslSocketFactory);
 
             logger.info("ConnectorUUID: " + connectorUUID);
             logger.info("Retrieving Dynamic Attribute Token...");
