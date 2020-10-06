@@ -17,12 +17,21 @@ import org.mockito.MockitoAnnotations;
 import de.fraunhofer.iais.eis.Message;
 import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
 import de.fraunhofer.iais.eis.util.ConstraintViolationException;
+import it.eng.idsa.businesslogic.configuration.SelfDescriptionConfiguration;
+import it.eng.idsa.businesslogic.configuration.SelfDescriptionConfiguration.ContractOffer;
+import it.eng.idsa.businesslogic.configuration.SelfDescriptionConfiguration.Resource;
 import it.eng.idsa.businesslogic.service.DapsService;
 
 public class SelfDescriptionServiceImplTest {
 	
 	@Mock
 	private DapsService dapsService;
+	@Mock
+	private SelfDescriptionConfiguration configuration;
+	@Mock
+	private Resource resource;
+	@Mock
+	private ContractOffer contractOffer;
 
 	private SelfDescriptionServiceImpl selfDefinitionService;
 
@@ -37,8 +46,20 @@ public class SelfDescriptionServiceImplTest {
 	public void setup() throws ConstraintViolationException, URISyntaxException {
 		MockitoAnnotations.initMocks(this);
 		when(dapsService.getJwtToken()).thenReturn("mockTokenValue");
-		selfDefinitionService = new SelfDescriptionServiceImpl(dapsService, infoModelVersion, companyURI, connectorURI,
-				resourceTitle, resourceLang, resourceDescription);
+		when(configuration.getCompanyURI()).thenReturn(companyURI);
+		when(configuration.getConnectorURI()).thenReturn(connectorURI);
+		when(configuration.getInfoModelVersion()).thenReturn(infoModelVersion);
+		when(configuration.getResource()).thenReturn(resource);
+		when(resource.getDescription()).thenReturn(resourceDescription);
+		when(resource.getLanguage()).thenReturn(resourceLang);
+		when(resource.getTitle()).thenReturn(resourceTitle);
+		when(configuration.getContractOffer()).thenReturn(contractOffer);
+		when(contractOffer.getPermission()).thenReturn("https://contractOfferPermission.com");
+		when(contractOffer.getProfile()).thenReturn("https://contractOfferProfile.com");
+		when(contractOffer.getProvider()).thenReturn("https://contractOfferProvider.com");
+		when(contractOffer.getTarget()).thenReturn("https://contractOfferTarget.com");
+
+		selfDefinitionService = new SelfDescriptionServiceImpl(dapsService, configuration);
 		selfDefinitionService.initConnector();
 	}
 
@@ -49,17 +70,16 @@ public class SelfDescriptionServiceImplTest {
 //		System.out.println(connectionString);
 
 		assertTrue(connectionString.contains("ids:BaseConnector"));
-		assertTrue(connectionString.contains("outboundModelVersion"));
-		assertTrue(connectionString.contains("inboundModelVersion"));
-		assertTrue(connectionString.contains("maintainer"));
-		assertTrue(connectionString.contains("curator"));
-		assertTrue(connectionString.contains("title"));
-		assertTrue(connectionString.contains("securityProfile"));
-		assertTrue(connectionString.contains("description"));
-		// TODO following 2 are not present yet, maybe different model
-//		assertTrue(connectionString.contains("ids:catalog"));
-//		assertTrue(connectionString.contains("ids:mainTitle"));
-		
+		assertTrue(connectionString.contains("ids:outboundModelVersion"));
+		assertTrue(connectionString.contains("ids:inboundModelVersion"));
+		assertTrue(connectionString.contains("ids:maintainer"));
+		assertTrue(connectionString.contains("ids:curator"));
+		assertTrue(connectionString.contains("ids:title"));
+		assertTrue(connectionString.contains("ids:securityProfile"));
+		assertTrue(connectionString.contains("ids:description"));
+		assertTrue(connectionString.contains("ids:hasEndpoint"));
+		assertTrue(connectionString.contains("ids:hasDefaultEndpoint"));
+		assertTrue(connectionString.contains("ids:title"));
 	}
 	
 	@Test
@@ -67,8 +87,8 @@ public class SelfDescriptionServiceImplTest {
 		Message availabilityMessage = selfDefinitionService.getConnectorAvailbilityMessage();
 		assertNotNull(availabilityMessage);
 		assertNotNull(availabilityMessage.getSecurityToken());
-		String ss = geObjectAsString(availabilityMessage);
-		System.out.println(ss);
+//		String ss = geObjectAsString(availabilityMessage);
+//		System.out.println(ss);
 	}
 	
 	@Test
@@ -92,6 +112,7 @@ public class SelfDescriptionServiceImplTest {
 		assertNotNull(unavailableMessage);
 	}
 	
+	@SuppressWarnings("unused")
 	private String geObjectAsString(Object toSerialize) {
 		final Serializer serializer = new Serializer();
 		String result = null;

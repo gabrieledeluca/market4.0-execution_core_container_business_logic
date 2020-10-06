@@ -1,17 +1,8 @@
 package it.eng.idsa.businesslogic.service.impl;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import de.fraunhofer.iais.eis.Message;
-import de.fraunhofer.iais.eis.Token;
-import de.fraunhofer.iais.eis.TokenBuilder;
-import de.fraunhofer.iais.eis.TokenFormat;
-import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
-import it.eng.idsa.businesslogic.service.MultipartMessageService;
-import it.eng.idsa.businesslogic.service.RejectionMessageService;
-import it.eng.idsa.businesslogic.util.RejectionMessageType;
-import it.eng.idsa.multipart.domain.MultipartMessage;
-import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
+import java.io.IOException;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.FormBodyPart;
@@ -28,7 +19,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import de.fraunhofer.iais.eis.Message;
+import de.fraunhofer.iais.eis.Token;
+import de.fraunhofer.iais.eis.TokenBuilder;
+import de.fraunhofer.iais.eis.TokenFormat;
+import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.domain.MultipartMessage;
+import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 
 
 /**
@@ -68,7 +70,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 		try {
 			message = new Serializer().deserialize(header, Message.class);
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error(e);
 		}
 		return message;
 	}
@@ -87,12 +89,9 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			JSONObject jsonObjectToken = (JSONObject) parser.parse(tokenValueSerialized);
 			jsonObject.put("ids:authorizationToken",jsonObjectToken);
 			output=serializeMessage(jsonObject);
-		} catch (JsonProcessingException | ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		} catch (ParseException | IOException e) {
+			logger.error(e);
+		} 
 		return output;
 	}
 
@@ -105,12 +104,9 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
 			jsonObject.remove("ids:authorizationToken");
 			output=serializeMessage(jsonObject);
-		} catch (JsonProcessingException | ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		} catch (ParseException | IOException e) {
+			logger.error(e);
+		} 
 		return output;
 	}
 
@@ -120,7 +116,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 		try {
 			message = new Serializer().deserialize(String.valueOf(header), Message.class);
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error(e);
 		}
 		return message;
 
@@ -186,8 +182,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			}
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		}
 		return multipartEntityBuilder.build();
 	}
@@ -215,15 +210,13 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 				}
 			}
 		} catch (ParseException | IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		}
 		return token;
 	}
 
 	public static String serializeMessage(Object object) throws IOException {
-		String serializeToPlain = MultipartMessageProcessor.multipartMessagetoString((MultipartMessage) object);
-//				serializeToPlainJson(object);
-		return serializeToPlain;
+//		String serializeToPlain = MultipartMessageProcessor.multipartMessagetoString((MultipartMessage) object);
+		return MultipartMessageProcessor.serializeToPlainJson(object);
 	}
 }

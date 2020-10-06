@@ -17,9 +17,11 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import org.apache.http.HttpEntity;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import it.eng.idsa.businesslogic.service.CommunicationService;
@@ -32,11 +34,11 @@ import it.eng.idsa.businesslogic.service.CommunicationService;
 @Transactional
 public class CommunicationServiceImpl implements CommunicationService {
 
+	private static final Logger logger = LogManager.getLogger(CommunicationServiceImpl.class);
+
 	static {
 	    disableSslVerification();
 	}
-	
-	private RestTemplate restTemplate;
 
 	private static void disableSslVerification() {
 	    try
@@ -85,18 +87,16 @@ public class CommunicationServiceImpl implements CommunicationService {
 	    }
 	}
 
-	
-
 	@Override
 	@Deprecated
 	public String sendData(String endpoint, HttpEntity data) {
-		// TODO Auto-generated method stub
+		RestTemplate restTemplate = new RestTemplate();
+		
 		String result;
 		try {
 			result = restTemplate.postForObject (endpoint, data, String.class); 
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (RestClientException e) {
+			logger.error(e);
 			return null;
 		}
 		return result;
@@ -104,13 +104,13 @@ public class CommunicationServiceImpl implements CommunicationService {
 	
 	@Override
 	public String sendData(String endpoint, String data) {
-		// TODO Auto-generated method stub
+		RestTemplate restTemplate = new RestTemplate();
+		
 		String result;
 		try {
-			result = restTemplate.postForObject (endpoint, data, String.class); 
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			result = restTemplate.postForObject(endpoint, data, String.class); 
+		} catch (RestClientException e) {
+			logger.error(e);
 			return null;
 		}
 		return result;

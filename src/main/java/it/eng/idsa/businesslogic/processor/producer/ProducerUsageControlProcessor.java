@@ -122,7 +122,7 @@ public class ProducerUsageControlProcessor implements Processor {
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setBody(responseMultipartMessageString);
         } catch (Exception e) {
-            logger.error("Usage Control Enforcement has failed with MESSAGE: " + e.getMessage());
+            logger.error("Usage Control Enforcement has failed with MESSAGE: ", e.getMessage());
             rejectionMessageService.sendRejectionMessage(
                     RejectionMessageType.REJECTION_USAGE_CONTROL,
                     message);

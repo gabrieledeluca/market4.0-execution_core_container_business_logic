@@ -1,12 +1,21 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -14,42 +23,73 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
+import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.businesslogic.util.communication.HttpClientGenerator;
 import it.eng.idsa.businesslogic.util.config.keystore.AcceptAllTruststoreConfig;
+import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
+import it.eng.idsa.multipart.domain.MultipartMessage;
+import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 
 @Component
 public class ProducerSendRegistrationRequestProcessor implements Processor {
 
 	private static final Logger logger = LogManager.getLogger(ProducerSendRegistrationRequestProcessor.class);
 
+	@Autowired
+    private MultipartMessageService multipartMessageService;
+	
+    @Autowired
+    private RejectionMessageService rejectionMessageService;
+	   
 	@Override
 	public void process(Exchange exchange) throws Exception {
-
 		Map<String, Object> headesParts = exchange.getIn().getHeaders();
 		Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
 		String forwardTo = headesParts.get("Forward-To").toString();
 
+		logger.info("About to send request towards broker... '{}'", forwardTo);
+		
 		String header = multipartMessageParts.get("header").toString();
 		String payload = null;
 		if (multipartMessageParts.containsKey("payload")) {
 			payload = multipartMessageParts.get("payload").toString();
 		}
+		
+		Message message = multipartMessageService.getMessage(header);
+        MultipartMessage multipartMessage = new MultipartMessageBuilder()
+    			.withHeaderContent(header)
+    			.withPayloadContent(payload)
+    			.build();
+        String multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage);
+
 
 		CloseableHttpResponse response = this.sendMultipartMessage(headesParts, header, payload, forwardTo);
 		// Handle response
 //		this.handleResponse(exchange, message, response, forwardTo, multipartMessageString);
 
-		String responseString = new String(response.getEntity().getContent().readAllBytes());
-		logger.info("response received from the DataAPP=" + responseString);
+//		String responseString = new String(response.getEntity().getContent().readAllBytes());
+//		logger.info("response received from the DataAPP=" + responseString);
+
+        // Handle response
+        this.handleResponse(exchange, message, response, forwardTo, multipartMessageString);
 
 		if (response != null) {
 			response.close();
@@ -88,13 +128,8 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 		CloseableHttpResponse response;
 		try {
 			response = getHttpClient().execute(httpPost);
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 			return null;
 		}
 
@@ -108,13 +143,84 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 		return cbValue;
 	}
 
-	private CloseableHttpClient getHttpClient() {
-		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
+	private CloseableHttpClient getHttpClient() throws IOException {
+//		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
+//
+//		CloseableHttpClient httpClient = HttpClientGenerator.get(config, true);
+//		logger.warn("Created Accept-All Http Client");
+		logger.info("Creating custom http client with broker certificate");
+		InputStream is = null;
+		try {
+			is = new ClassPathResource("broker_cert.cer").getInputStream();
 
-		CloseableHttpClient httpClient = HttpClientGenerator.get(config, true);
-		logger.warn("Created Accept-All Http Client");
+			CertificateFactory cf = CertificateFactory.getInstance("X.509");
+			X509Certificate caCert = (X509Certificate) cf.generateCertificate(is);
 
-		return httpClient;
+			TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+			KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+			ks.load(null); // You don't need the KeyStore instance to come from a file.
+			ks.setCertificateEntry("caCert", caCert);
+
+			tmf.init(ks);
+
+			SSLContext sslContext = SSLContext.getInstance("TLS");
+			sslContext.init(null, tmf.getTrustManagers(), null);
+
+			SSLConnectionSocketFactory sslConSocFactory = new SSLConnectionSocketFactory(sslContext,
+					new NoopHostnameVerifier());
+
+			// Creating HttpClientBuilder
+			HttpClientBuilder clientbuilder = HttpClients.custom();
+
+			// Setting the SSLConnectionSocketFactory
+			clientbuilder = clientbuilder.setSSLSocketFactory(sslConSocFactory);
+
+			// Building the CloseableHttpClient
+			CloseableHttpClient httpclient = clientbuilder.build();
+			return httpclient;
+		} catch(CertificateException | NoSuchAlgorithmException | KeyStoreException | IOException |
+				KeyManagementException ex) {
+			logger.error("Exception {}", ex);
+		}
+		finally {
+			if (is != null) {
+				is.close();
+			}
+		}
+		return null;
 	}
 
+	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String forwardTo, String multipartMessageBody) throws UnsupportedOperationException, IOException {
+        if (response == null) {
+            logger.info("...communication error");
+            rejectionMessageService.sendRejectionMessage(
+                    RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+                    message);
+        } else {
+            String responseString = new String(response.getEntity().getContent().readAllBytes());
+            logger.info("response received from the DataAPP=" + responseString);
+
+            int statusCode = response.getStatusLine().getStatusCode();
+            logger.info("status code of the response message is: " + statusCode);
+            if (statusCode >= 300) {
+                if (statusCode == 404) {
+                    logger.info("...communication error - bad forwardTo URL" + forwardTo);
+                    rejectionMessageService.sendRejectionMessage(
+                            RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+                            message);
+                }
+                logger.info("data sent unuccessfully to destination " + forwardTo);
+                rejectionMessageService.sendRejectionMessage(
+                        RejectionMessageType.REJECTION_MESSAGE_COMMON,
+                        message);
+            } else {
+                logger.info("data sent to destination " + forwardTo);
+                logger.info("Successful response: " + responseString);
+                // TODO:
+                // Set original body which is created using the original payload and header
+                exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
+                exchange.getOut().setBody(responseString);
+            }
+        }
+    }
 }

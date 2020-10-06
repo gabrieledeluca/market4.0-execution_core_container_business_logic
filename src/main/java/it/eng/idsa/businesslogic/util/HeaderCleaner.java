@@ -27,7 +27,7 @@ public class HeaderCleaner {
 
 		for (String technicalHeader : technicalHeadersList) {
 			if (headers.containsKey(technicalHeader)) {
-				logger.info("==============Technical header=========================="+ technicalHeader);
+				logger.debug("==============Technical header=========================="+ technicalHeader);
 				headers.remove(technicalHeader);
 			}
 		}

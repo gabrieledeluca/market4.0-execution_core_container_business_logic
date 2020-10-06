@@ -1,12 +1,9 @@
 
 package it.eng.idsa.businesslogic.service.impl;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.UUID;
@@ -18,17 +15,20 @@ import javax.xml.datatype.DatatypeFactory;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import de.fraunhofer.iais.eis.BaseConnectorBuilder;
 import de.fraunhofer.iais.eis.Connector;
+import de.fraunhofer.iais.eis.ConnectorEndpointBuilder;
 import de.fraunhofer.iais.eis.ConnectorUnavailableMessageBuilder;
 import de.fraunhofer.iais.eis.ConnectorUpdateMessageBuilder;
 import de.fraunhofer.iais.eis.ContractOffer;
+import de.fraunhofer.iais.eis.ContractOfferBuilder;
 import de.fraunhofer.iais.eis.DynamicAttributeToken;
 import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder;
 import de.fraunhofer.iais.eis.Message;
+import de.fraunhofer.iais.eis.Permission;
+import de.fraunhofer.iais.eis.PermissionBuilder;
 import de.fraunhofer.iais.eis.Resource;
 import de.fraunhofer.iais.eis.ResourceBuilder;
 import de.fraunhofer.iais.eis.ResourceCatalog;
@@ -39,6 +39,7 @@ import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
 import de.fraunhofer.iais.eis.util.ConstraintViolationException;
 import de.fraunhofer.iais.eis.util.TypedLiteral;
 import de.fraunhofer.iais.eis.util.Util;
+import it.eng.idsa.businesslogic.configuration.SelfDescriptionConfiguration;
 import it.eng.idsa.businesslogic.service.DapsService;
 import it.eng.idsa.businesslogic.service.SelfDescriptionService;
 
@@ -49,12 +50,7 @@ import it.eng.idsa.businesslogic.service.SelfDescriptionService;
 @Service
 public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 	private static final Logger logger = LogManager.getLogger(SelfDescriptionServiceImpl.class);
-	private String infoModelVersion;
-	private String companyURI;
-	private String connectorURI;
-	private String resourceTitle;
-	private String resourceLang;
-	private String resourceDescription;
+	private SelfDescriptionConfiguration selfDescriptionConfiguration;
 	Connector connector;
 	
 	private DapsService dapsService;
@@ -62,38 +58,27 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 
 	public SelfDescriptionServiceImpl(
 			DapsService dapsService,
-			@Value("${it.eng.idsa.service.infomodel.version ?:4.0.0}") final String infoModelVersion,
-			@Value("${it.eng.idsa.service.company.uri ?:http://w3c.eng.it}") final String companyURI,
-			@Value("${it.eng.idsa.service.connector.uri ?:http://w3c.eng.it}") final String connectorURI,
-			@Value("${it.eng.idsa.service.resources.title ?:MultipartData}") final String resourceTitle,
-			@Value("${it.eng.idsa.service.resources.title ?:EN}") final String resourceLang,
-			@Value("${it.eng.idsa.service.resources.title?:'Execution Core Container}") final String resourceDescription) {
+			SelfDescriptionConfiguration selfDescriptionConfiguration) {
 		this.dapsService = dapsService;
-		this.infoModelVersion = infoModelVersion;
-		this.companyURI = companyURI;
-		this.connectorURI = connectorURI;
-		this.resourceTitle = resourceTitle;
-		this.resourceLang = resourceLang;
-		this.resourceDescription = resourceDescription;
+		this.selfDescriptionConfiguration = selfDescriptionConfiguration;
 	}
 
 	@PostConstruct
 	public void initConnector() throws ConstraintViolationException, URISyntaxException {
 		issuerConnectorURI = new URI("https://test.connector.de/" + RandomStringUtils.randomAlphabetic(3));
-		this.connector = (new BaseConnectorBuilder(issuerConnectorURI))
-				._maintainer_(new URI(this.companyURI))
+		this.connector = new BaseConnectorBuilder(issuerConnectorURI)
+				._maintainer_(new URI(selfDescriptionConfiguration.getCompanyURI()))
 				._curator_(issuerConnectorURI)
 				._resourceCatalog_((ArrayList<? extends ResourceCatalog>) this.getCatalog()) // Infomodel version 4.0.0
 				._securityProfile_(SecurityProfile.BASE_SECURITY_PROFILE) // Infomodel version 4.0.0
-				// ._securityProfile_(SecurityProfile.BASE_CONNECTOR_SECURITY_PROFILE) //
-				// Infomodel version 2.1.0-SNAPSHOT
 				._maintainer_(new URI("https://maintainerURL" + RandomStringUtils.randomAlphabetic(3)))
-//				._authInfo_(new AuthInfoBuilder(new URI("conn1:auth_info"))._authService_(new URI("https://authServiceURL"))._authStandard_(AuthStandard.OAUTH2_JWT).build())
-				._inboundModelVersion_(Util.asList(new String[] { this.infoModelVersion }))
+				._inboundModelVersion_(Util.asList(new String[] { selfDescriptionConfiguration.getInfoModelVersion() }))
 				._title_(Util.asList(new TypedLiteral("Test Fraunhofer Digital Broker " + RandomStringUtils.randomAlphabetic(3), "en")))
-//				._mainTitle_(Util.asList(new PlainLiteral("Fraunhofer Digital Broker", "en")))
 				._description_(Util.asList(new TypedLiteral("This is selfDescription description " + RandomStringUtils.randomAlphabetic(3), "en")))
-				._outboundModelVersion_(this.infoModelVersion).build();
+				._outboundModelVersion_(selfDescriptionConfiguration.getInfoModelVersion())
+				._hasDefaultEndpoint_(new ConnectorEndpointBuilder(new URI("https://someURL/selfDescription")).build())
+				._hasEndpoint_(Util.asList(new ConnectorEndpointBuilder(new URI("https://someURL/incoming-data-channel/receivedMessage")).build()))
+				.build();
 	}
 
 	public Connector getConnector() throws ConstraintViolationException, URISyntaxException {
@@ -111,37 +96,37 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		try {
 			result = serializer.serialize(this.connector);
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error(e);
 		}
 		return result;
 	}
 
-	private Resource getResource() {
+	private Resource getResource() throws ConstraintViolationException, URISyntaxException {
 		Resource offeredResource = (new ResourceBuilder())
-				._title_(Util.asList(new TypedLiteral(this.resourceTitle, this.resourceLang)))
-				._description_(Util.asList(new TypedLiteral(this.resourceDescription, this.resourceLang)))
+				._title_(Util.asList(
+						new TypedLiteral(selfDescriptionConfiguration.getResource().getTitle(), 
+								selfDescriptionConfiguration.getResource().getLanguage())))
+				._description_(Util.asList(
+						new TypedLiteral(selfDescriptionConfiguration.getResource().getDescription(), 
+								selfDescriptionConfiguration.getResource().getLanguage())))
 				._contractOffer_(getContractOffers()).build();
 		return offeredResource;
 	}
 
-	// TODO
-	private ArrayList<ContractOffer> getContractOffers() {
-		try {
-			File file = new File(this.getClass().getClassLoader().getResource("contract-offers.json").getFile());
-			Path filePath = Path.of(file.getAbsolutePath());
-			ContractOffer contractOffer = new Serializer().deserialize(Files.readString(filePath), ContractOffer.class);
+	private ArrayList<ContractOffer> getContractOffers() throws ConstraintViolationException, URISyntaxException {
+		Permission permission = new PermissionBuilder(
+				new URI(selfDescriptionConfiguration.getContractOffer().getPermission())).build();
+		ContractOffer contractOffer = new ContractOfferBuilder(new URI("http://example.com/ids-profile/1234"))
+				._provider_(new URI(selfDescriptionConfiguration.getContractOffer().getProvider()))
+				._permission_(Util.asList(permission))
+				.build();
+		
 			ArrayList<ContractOffer> contractOfferList = new ArrayList<>();
 			contractOfferList.add(contractOffer);
 			return contractOfferList;
-		} catch (IOException e) {
-			logger.error("Error in SelfDescriptionService while retrieving contract-offers.json with message: "
-					+ e.getMessage());
-		}
-		return null;
 	}
 
-//	// Infomodel version 4.0.0
-	private java.util.List<ResourceCatalog> getCatalog() {
+	private java.util.List<ResourceCatalog> getCatalog() throws ConstraintViolationException, URISyntaxException {
 		ResourceCatalog catalog = (new ResourceCatalogBuilder()
 				._offeredResource_(Util.asList(new Resource[] { this.getResource() })).build());
 		java.util.List<ResourceCatalog> catalogList = new ArrayList<>();
@@ -149,12 +134,6 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		return catalogList;
 	}
 
-	// Infomodel version 2.1.0-SNAPSHOT
-//	private Catalog getCatalog210() {
-//		Catalog catalog = (new CatalogBuilder())._offer_(Util.asList(new Resource[] { this.getResource() })).build();
-//		return catalog;
-//	}
-	
 	@Override
 	public Message getConnectorAvailbilityMessage() throws ConstraintViolationException, URISyntaxException, DatatypeConfigurationException {
 		DynamicAttributeToken securityToken = getJwToken();
@@ -164,7 +143,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		._senderAgent_(new URI("http://example.org" + RandomStringUtils.randomAlphabetic(3)))
 		._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))
 		._issuerConnector_(issuerConnectorURI)
-		._modelVersion_(infoModelVersion)
+		._modelVersion_(selfDescriptionConfiguration.getInfoModelVersion())
 		._affectedConnector_(connector.getId())
 		.build();
 	}
@@ -188,7 +167,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		return new ConnectorUpdateMessageBuilder(new URI("https://w3id.org/idsa/autogen/connectorUpdateMessage/6d875403-cfea-4aad-979c-3515c2e71967"))
 				._securityToken_(securityToken)
 				._senderAgent_(new URI("http://example.org"))
-				._modelVersion_(infoModelVersion)
+				._modelVersion_(selfDescriptionConfiguration.getInfoModelVersion())
 				._issuerConnector_(issuerConnectorURI)
 				._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))
 				._affectedConnector_(connector.getId())
@@ -203,7 +182,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		
 		return new ConnectorUnavailableMessageBuilder(new URI("http://industrialdataspace.org/connectorUnavailableMessage/1a421b8c-3407-44a8-aeb9-253f145c869a"))
 				._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))
-				._modelVersion_(infoModelVersion)
+				._modelVersion_(selfDescriptionConfiguration.getInfoModelVersion())
 				._issuerConnector_(issuerConnectorURI)
 				._securityToken_(securityToken)
 				.build();
@@ -216,7 +195,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 		DynamicAttributeToken securityToken = getJwToken();
 		
 		return new ConnectorUnavailableMessageBuilder(new URI("https://w3id.org/idsa/autogen/connectorInactiveMessage/8ea20fa1-7258-41c9-abc2-82c787d50ec3"))
-				._modelVersion_(infoModelVersion)
+				._modelVersion_(selfDescriptionConfiguration.getInfoModelVersion())
 				._issuerConnector_(issuerConnectorURI)
 				._senderAgent_(new URI("http://example.org"))
 				._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))

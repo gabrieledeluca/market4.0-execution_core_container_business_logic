@@ -8,6 +8,7 @@ import org.apache.camel.Processor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
@@ -27,6 +28,9 @@ public class ConsumerValidateTokenProcessor implements Processor {
 	
 	private static final Logger logger = LogManager.getLogger(ConsumerValidateTokenProcessor.class);
 	
+	@Value("${application.eccHttpSendRouter}")
+	private String eccHttpSendRouter;
+	
 	@Autowired
 	DapsService dapsService;
 	
@@ -41,12 +45,20 @@ public class ConsumerValidateTokenProcessor implements Processor {
 		
 		Message message = null;
 		
-		// Get "multipartMessageParts" from the input "exchange"
-		Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
-		message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
 		
-		// Get "token" from the input "multipartMessageParts"
-		String token = multipartMessageService.getToken(message);
+		Map<String, Object> multipartMessageParts = null;
+		
+		String token = null;
+		if (eccHttpSendRouter.equals("http-header")) {
+			token = exchange.getIn().getHeader("IDS-SecurityToken-TokenValue").toString();
+		}else {
+			// Get "multipartMessageParts" from the input "exchange"
+			multipartMessageParts = exchange.getIn().getBody(HashMap.class);
+			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+			// Get "token" from the input "multipartMessageParts"
+			token = multipartMessageService.getToken(message);
+			
+		}
 		logger.info("token: ", token);
 		
 		// Check is "token" valid
@@ -61,11 +73,13 @@ public class ConsumerValidateTokenProcessor implements Processor {
 		}
 		
 		logger.info("is token valid: "+isTokenValid);
-		multipartMessageParts.put("isTokenValid", isTokenValid);
-
 		exchange.getOut().setHeaders(exchange.getIn().getHeaders());
-		// Return multipartMessageParts
-		exchange.getOut().setBody(multipartMessageParts);
+		if (eccHttpSendRouter.equals("http-header")) {
+			exchange.getOut().setBody(exchange.getIn().getBody());
+		}else {
+			multipartMessageParts.put("isTokenValid", isTokenValid);
+			exchange.getOut().setBody(multipartMessageParts);
+		}
 	}
 
 }

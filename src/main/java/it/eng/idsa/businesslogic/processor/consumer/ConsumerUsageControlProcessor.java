@@ -1,27 +1,5 @@
 package it.eng.idsa.businesslogic.processor.consumer;
 
-import com.google.gson.*;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import de.fraunhofer.dataspaces.iese.camel.interceptor.model.Meta;
-import de.fraunhofer.dataspaces.iese.camel.interceptor.model.TargetArtifact;
-import de.fraunhofer.dataspaces.iese.camel.interceptor.model.UsageControlObject;
-import de.fraunhofer.iais.eis.ArtifactRequestMessage;
-import de.fraunhofer.iais.eis.ArtifactResponseMessage;
-import de.fraunhofer.iais.eis.Message;
-import de.fraunhofer.iais.eis.RejectionMessage;
-import it.eng.idsa.businesslogic.service.MultipartMessageService;
-import it.eng.idsa.businesslogic.service.RejectionMessageService;
-import it.eng.idsa.businesslogic.util.RejectionMessageType;
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,6 +9,33 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.camel.Exchange;
+import org.apache.camel.Processor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Component;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+
+import de.fraunhofer.dataspaces.iese.camel.interceptor.model.Meta;
+import de.fraunhofer.dataspaces.iese.camel.interceptor.model.TargetArtifact;
+import de.fraunhofer.dataspaces.iese.camel.interceptor.model.UsageControlObject;
+import de.fraunhofer.iais.eis.ArtifactRequestMessage;
+import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.RejectionMessageType;
 
 
 /**
@@ -87,6 +92,7 @@ public class ConsumerUsageControlProcessor implements Processor {
             try {
                 artifactRequestMessage = (ArtifactRequestMessage) requestMessage;
             } catch (Exception e) {
+            	logger.error(e.getMessage());
                 isUsageControlObject = false;
             }
             if (isUsageControlObject) {
@@ -104,7 +110,7 @@ public class ConsumerUsageControlProcessor implements Processor {
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setBody(exchange.getIn().getBody());
         } catch (Exception e) {
-            logger.error("Usage Control Enforcement has failed with MESSAGE: " + e.getMessage());
+            logger.error("Usage Control Enforcement has failed with MESSAGE: ", e.getMessage());
             rejectionMessageService.sendRejectionMessage(
                     RejectionMessageType.REJECTION_USAGE_CONTROL,
                     requestMessage);
