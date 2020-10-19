@@ -1,6 +1,5 @@
 package it.eng.idsa.businesslogic.processor.consumer;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -12,7 +11,6 @@ import org.springframework.stereotype.Component;
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationB;
 import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
 import it.eng.idsa.businesslogic.util.HeaderCleaner;
-import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 
@@ -44,23 +42,18 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 	public void process(Exchange exchange) throws Exception {
 
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
+		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 
 		// Put in the header value of the application.property:
 		// application.isEnabledClearingHouse
 		headersParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
-		if (!eccHttpSendRouter.equals("http-header")) {
-			Map<String, Object> multipartMessagePartsReceived = exchange.getIn().getBody(HashMap.class);
-			// Get header, payload and message
-			String header = multipartMessagePartsReceived.get("header").toString();
-			String payload = null;
-			if (multipartMessagePartsReceived.containsKey("payload")) {
-				payload = multipartMessagePartsReceived.get("payload").toString();
-			}
+		if (eccHttpSendRouter.equals("http-header")) {
+			exchange.getOut().setBody(exchange.getIn().getBody());
+		} else {
+	
 
-			MultipartMessage responseMessage = new MultipartMessageBuilder().withHeaderContent(header)
-					.withPayloadContent(payload).build();
-			String responseString = MultipartMessageProcessor.multipartMessagetoString(responseMessage, false);
-			String contentType = responseMessage.getHttpHeaders().getOrDefault("Content-Type", "multipart/mixed");
+			String responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
+			String contentType = multipartMessage.getHttpHeaders().getOrDefault("Content-Type", "multipart/mixed");
 			headersParts.put("Content-Type", contentType);
 			exchange.getOut().setBody(responseString);
 			// TODO: Send The MultipartMessage message to the WebSocket
@@ -69,9 +62,7 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 						.responseMessageBufferWebSocket();
 				responseMessageServerBean.add(responseString.getBytes());
 			}
-		} else {
-			exchange.getOut().setBody(exchange.getIn().getBody());
-		}
+}
 		HeaderCleaner.removeTechnicalHeaders(headersParts);
 		if (isEnabledClearingHouse) {
 			// Put in the header value of the application.property:

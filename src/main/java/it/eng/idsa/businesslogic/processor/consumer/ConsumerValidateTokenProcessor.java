@@ -1,6 +1,5 @@
 package it.eng.idsa.businesslogic.processor.consumer;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -16,6 +15,7 @@ import it.eng.idsa.businesslogic.service.DapsService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.domain.MultipartMessage;
 
 /**
  * 
@@ -45,6 +45,7 @@ public class ConsumerValidateTokenProcessor implements Processor {
 		
 		Message message = null;
 		
+		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 		
 		Map<String, Object> multipartMessageParts = null;
 		
@@ -53,17 +54,16 @@ public class ConsumerValidateTokenProcessor implements Processor {
 			token = exchange.getIn().getHeader("IDS-SecurityToken-TokenValue").toString();
 		}else {
 			// Get "multipartMessageParts" from the input "exchange"
-			multipartMessageParts = exchange.getIn().getBody(HashMap.class);
-			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+//			multipartMessageParts = exchange.getIn().getBody(HashMap.class);
+//			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
 			// Get "token" from the input "multipartMessageParts"
-			token = multipartMessageService.getToken(message);
+			token = multipartMessageService.getToken(multipartMessage.getHeaderContent());
 			
 		}
 		logger.info("token: ", token);
 		
 		// Check is "token" valid
 		boolean isTokenValid = dapsService.validateToken(token);
-//		boolean isTokenValid = true;
 		
 		if(isTokenValid==false) {			
 			logger.error("Token is invalid");
@@ -77,9 +77,10 @@ public class ConsumerValidateTokenProcessor implements Processor {
 		if (eccHttpSendRouter.equals("http-header")) {
 			exchange.getOut().setBody(exchange.getIn().getBody());
 		}else {
-			multipartMessageParts.put("isTokenValid", isTokenValid);
+//			multipartMessageParts.put("isTokenValid", isTokenValid);
 			exchange.getOut().setBody(multipartMessageParts);
 		}
+		exchange.getOut().setBody(multipartMessage);
 	}
 
 }

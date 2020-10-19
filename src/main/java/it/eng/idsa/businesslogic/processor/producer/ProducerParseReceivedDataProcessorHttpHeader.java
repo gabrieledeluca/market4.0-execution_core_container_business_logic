@@ -1,6 +1,5 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -13,9 +12,11 @@ import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
-import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
+import it.eng.idsa.multipart.domain.MultipartMessage;
+import it.eng.idsa.multipart.util.MultipartMessageKey;
 
 @Component
 public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
@@ -24,9 +25,6 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 
 	@Value("${application.isEnabledDapsInteraction}")
 	private boolean isEnabledDapsInteraction;
-	
-	@Autowired
-	private MultipartMessageService multipartMessageService;
 	
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
@@ -38,8 +36,9 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 	public void process(Exchange exchange) throws Exception {
 		
 		Message message = null;
-		Map<String, Object> headersParts = new HashMap<String, Object>();
+		Map<String, Object> headersParts = null;
 		String payload = null;
+		Map<String, String> headerContentHeaders = null;
 
 		// Get from the input "exchange"
 		headersParts = exchange.getIn().getHeaders();
@@ -49,20 +48,23 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, message);
 
 		}
+		
 		try {
 			// Put in the header value of the application.property: application.isEnabledDapsInteraction
 			headersParts.put("Is-Enabled-Daps-Interaction", isEnabledDapsInteraction);
+			
 
-			// Create multipart message parts
+			headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
 			
-//			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
-//			multipartMessageParts.put("header", header);
-			//payload = multipartMessageService.getPayloadContent(receivedDataBodyBinary);
-//			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
-			
+			String header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
+
+			MultipartMessage multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload).withHttpHeader(headerContentHeaders).build();
+			headersParts.put("Payload-Content-Type", multipartMessage.getPayloadHeader().get(MultipartMessageKey.CONTENT_TYPE.label));
+
 			// Return exchange
+
 			exchange.getOut().setHeaders(headersParts);
-			exchange.getOut().setBody(payload);
+			exchange.getOut().setBody(multipartMessage);
 
 		} catch (Exception e) {
 			logger.error("Error parsing multipart message:" + e);

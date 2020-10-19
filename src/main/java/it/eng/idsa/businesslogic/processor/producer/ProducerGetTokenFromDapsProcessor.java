@@ -1,6 +1,5 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -27,6 +26,8 @@ import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
+import it.eng.idsa.multipart.domain.MultipartMessage;
 
 /**
  * 
@@ -57,18 +58,19 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 
+		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
+		//the line below is temporary until doing the change for http-headers
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
-		Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
 		Message message = null;
 
 		// Get message id
 		try {
 			if (eccHttpSendRouter.equals("http-header")) {
 				logger.info("message id=" + headersParts.get("IDS-Id"));
-				String header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
-				message = multipartMessageService.getMessage(header);
+//				String header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
+//				message = multipartMessageService.getMessage(header);
 			} else {
-				message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+				message = multipartMessageService.getMessage(multipartMessage.getHeaderContentString());
 				logger.info("message id=" + message.getId());
 			}
 		} catch (Exception e) {
@@ -76,18 +78,17 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, message);
 		}
 
-//		if (message==null) {
-//			logger.error("Parsed multipart message is null");
-//			rejectionMessageService.sendRejectionMessage(
-//					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
-//					message);
-//		}
+		if (message==null) {
+			logger.error("Parsed multipart message is null");
+			rejectionMessageService.sendRejectionMessage(
+					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
+					message);
+		}
 
 		// Get the Token from the DAPS
-		String token = "";
+		String token = null;
 		try {
 			token = dapsService.getJwtToken();
-//			token="123";
 		} catch (Exception e) {
 			logger.error("Can not get the token from the DAPS server ", e);
 			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_TOKEN_LOCAL_ISSUES, message);
@@ -106,16 +107,21 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 
 		logger.info("token=" + token);
 		if (eccHttpSendRouter.equals("http-header")) {
-			transformJWTTokenToHeaders(token, headersParts);
-			exchange.getOut().setBody(exchange.getIn().getBody());
+			multipartMessage.getHttpHeaders().put("daps-token", token);
 		} else {
 			String messageStringWithToken = multipartMessageService.addToken(message, token);
 			logger.info("messageStringWithToken=" + messageStringWithToken);
 
-			multipartMessageParts.put("messageWithToken", messageStringWithToken);
-			exchange.getOut().setBody(multipartMessageParts);
+			multipartMessage = new MultipartMessageBuilder()
+					.withHttpHeader(multipartMessage.getHttpHeaders())
+					.withHeaderHeader(multipartMessage.getHeaderHeader())
+					.withHeaderContent(messageStringWithToken)
+					.withPayloadHeader(multipartMessage.getPayloadHeader())
+					.withPayloadContent(multipartMessage.getPayloadContent())
+					.build();
 		}
 		// Return exchange
+		exchange.getOut().setBody(multipartMessage);
 		exchange.getOut().setHeaders(headersParts);
 
 	}

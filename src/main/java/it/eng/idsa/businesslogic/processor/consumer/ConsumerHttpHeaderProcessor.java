@@ -28,15 +28,13 @@ public class ConsumerHttpHeaderProcessor implements Processor {
 		
 		// if the message is not sent over http-header this processor is skipped
 		
-//		if (eccHttpSendRouter.equals("http-header") && !openDataAppReceiverRouter.equals("http-header")) {
-//			String headerFromHeaders = new String();
-//			if (isEnabledDapsInteraction) {
-//				headerFromHeaders = headerService.getHeaderMessagePartFromHttpHeadersWithToken(exchange.getIn().getHeaders());
-//			}else {
-//				headerFromHeaders = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(exchange.getIn().getHeaders());
-//			}
+//		if (eccHttpSendRouter.equals("http-header")) {
+//			
+//			
+//			headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
+//			String header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
 //
-//			exchange.getIn().getHeaders().put("header", headerFromHeaders);
+//			exchange.getIn().getHeaders().put("header", header);
 //
 //		}
 		

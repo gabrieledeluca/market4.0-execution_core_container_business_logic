@@ -201,7 +201,7 @@ public class CamelRouteProducer extends RouteBuilder {
                     .endChoice();
             
          // Camel SSL - Endpoint: A - Http-header
-            from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageHttpHeader")
+            from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageHttpHeader" + "?httpMethodRestrict=POST")
                     .process(parseReceivedDataProcessorHttpHeader)
                     .choice()
                         .when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))

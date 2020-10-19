@@ -18,4 +18,6 @@ public interface HttpHeaderService {
 	Map<String, Object> prepareMessageForSendingAsHttpHeadersWithoutToken(String header) throws JsonParseException, JsonMappingException, IOException;
 	
 	void removeTokenHeaders(Map<String, Object> headers);
+
+	Map<String, String> getHeaderContentHeaders(Map<String, Object> headersParts);
 }

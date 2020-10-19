@@ -164,4 +164,34 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		return headers;
 	}
 
+	@Override
+	public Map<String, String> getHeaderContentHeaders(Map<String, Object> headersParts) {
+		
+		Map<String, String> headerContentHeaders = new HashMap<>();
+		
+		if (headersParts.get("IDS-Messagetype") != null) {
+			headerContentHeaders.put("IDS-Messagetype", headersParts.get("IDS-Messagetype").toString());
+		}
+		if (headersParts.get("IDS-Messagetype") != null) {
+			headerContentHeaders.put("IDS-Id", headersParts.get("IDS-Id").toString());
+		}
+		if (headersParts.get("IDS-Issued") != null) {
+			headerContentHeaders.put("IDS-Issued", headersParts.get("IDS-Issued").toString());
+		}
+		if (headersParts.get("IDS-ModelVersion") != null) {
+			headerContentHeaders.put("IDS-ModelVersion", headersParts.get("IDS-ModelVersion").toString());
+		}
+		if (headersParts.get("IDS-IssuerConnector") != null) {
+			headerContentHeaders.put("IDS-IssuerConnector", headersParts.get("IDS-IssuerConnector").toString());
+		}
+		if (headersParts.get("IDS-TransferContract") != null) {
+			headerContentHeaders.put("IDS-TransferContract", headersParts.get("IDS-TransferContract").toString());
+		}
+		if (headersParts.get("IDS-CorrelationMessage") != null) {
+			headerContentHeaders.put("IDS-CorrelationMessage", headersParts.get("IDS-CorrelationMessage").toString());
+		}		
+		
+		return headerContentHeaders;
+	}
+
 }

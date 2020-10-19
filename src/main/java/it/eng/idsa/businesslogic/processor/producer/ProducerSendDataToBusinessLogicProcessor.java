@@ -13,17 +13,8 @@ import java.util.regex.Pattern;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.http.Header;
-import org.apache.http.HttpEntity;
 import org.apache.http.ParseException;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.ByteArrayBody;
-import org.apache.http.entity.mime.content.ContentBody;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asynchttpclient.ws.WebSocket;
@@ -40,10 +31,8 @@ import it.eng.idsa.businesslogic.processor.producer.websocket.client.MessageWebS
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
-import it.eng.idsa.businesslogic.util.HeaderCleaner;
+import it.eng.idsa.businesslogic.service.impl.SendDataToBusinessLogicServiceImpl;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
-import it.eng.idsa.businesslogic.util.communication.HttpClientGenerator;
-import it.eng.idsa.businesslogic.util.config.keystore.AcceptAllTruststoreConfig;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
@@ -86,6 +75,9 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 
 	@Autowired
 	private HttpHeaderService headerService;
+	
+	@Autowired
+	private SendDataToBusinessLogicServiceImpl sendDataToBusinessLogicService;
 
 	@Autowired
 	private WebSocketClientConfiguration webSocketClientConfiguration;
@@ -99,7 +91,9 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 
-		Map<String, Object> headesParts = exchange.getIn().getHeaders();
+		
+		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
+		Map<String, Object> headerParts = exchange.getIn().getHeaders();
 
 		String messageWithToken = null;
 
@@ -108,29 +102,17 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		Message message = null;
 
 		String multipartMessageString = null;
-		if (eccHttpSendRouter.equals("http-header")) {
-			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headesParts);
-			payload = exchange.getIn().getBody(String.class);
-			headesParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithoutToken(header));
-		} else {
-			Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
-			// Get parts of the Multipart message
-			if (Boolean.parseBoolean(headesParts.get("Is-Enabled-Daps-Interaction").toString())) {
-				messageWithToken = multipartMessageParts.get("messageWithToken").toString();
-			}
-			header = multipartMessageParts.get("header").toString();
-			payload = null;
-			if (multipartMessageParts.containsKey("payload")) {
-				payload = multipartMessageParts.get("payload").toString();
-			}
-		}
+		header = multipartMessage.getHeaderContentString();
+		payload = multipartMessage.getPayloadContent();
 
 		message = multipartMessageService.getMessage(header);
-		MultipartMessage multipartMessage = new MultipartMessageBuilder().withHeaderContent(header)
-				.withPayloadContent(payload).build();
-		multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage);
 
-		String forwardTo = headesParts.get("Forward-To").toString();
+		//message needed for clearing house usage
+		MultipartMessage multipartMessageForClearinghouse = new MultipartMessageBuilder().withHeaderContent(header)
+				.withPayloadContent(payload).build();
+		multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessageForClearinghouse);
+
+		String forwardTo = headerParts.get("Forward-To").toString();
 
 		if (isEnabledIdscp) {
 			// check & exstract IDSCP WebSocket IP and Port
@@ -143,7 +125,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			}
 			// -- Send data using IDSCP - (Client) - WebSocket
 			String response;
-			if (Boolean.parseBoolean(headesParts.get("Is-Enabled-Daps-Interaction").toString())) {
+			if (Boolean.parseBoolean(headerParts.get("Is-Enabled-Daps-Interaction").toString())) {
 				response = this.sendMultipartMessageWebSocket(this.webSocketHost, this.webSocketPort, messageWithToken,
 						payload, message);
 			} else {
@@ -164,7 +146,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 
 			// -- Send data using HTTPS - (Client) - WebSocket
 			String response;
-			if (Boolean.parseBoolean(headesParts.get("Is-Enabled-Daps-Interaction").toString())) {
+			if (Boolean.parseBoolean(headerParts.get("Is-Enabled-Daps-Interaction").toString())) {
 				response = messageWebSocketOverHttpSender.sendMultipartMessageWebSocketOverHttps(this.webSocketHost,
 						this.webSocketPort, messageWithToken, payload, message);
 			} else {
@@ -175,8 +157,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			this.handleResponseWebSocket(exchange, message, response, forwardTo, multipartMessageString);
 		} else {
 			// Send MultipartMessage HTTPS
-			CloseableHttpResponse response = this.sendMultipartMessage(headesParts, messageWithToken, header, payload,
-					forwardTo, message);
+			CloseableHttpResponse response = this.sendMultipartMessage(headerParts,	forwardTo, message,  multipartMessage);
 			// Handle response
 			this.handleResponse(exchange, message, response, forwardTo, multipartMessageString);
 
@@ -187,25 +168,22 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 
 	}
 
-	private CloseableHttpResponse sendMultipartMessage(Map<String, Object> headerParts, String messageWithToken,
-			String header, String payload, String forwardTo, Message message)
+	private CloseableHttpResponse sendMultipartMessage(Map<String, Object> headerParts, String forwardTo, Message message, MultipartMessage multipartMessage)
 			throws IOException, KeyManagementException, NoSuchAlgorithmException, InterruptedException,
 			ExecutionException, UnsupportedEncodingException {
 		CloseableHttpResponse response = null;
-//        Message message = multipartMessageService.getMessage(header);
 		// -- Send message using HTTPS
-		if (Boolean.parseBoolean(headerParts.get("Is-Enabled-Daps-Interaction").toString())) {
 			switch (eccHttpSendRouter) {
 			case "mixed": {
-				response = this.forwardMessageBinary(forwardTo, messageWithToken, payload, headerParts);
+				response = sendDataToBusinessLogicService.sendMessageBinary(forwardTo, multipartMessage, headerParts);
 				break;
 			}
 			case "form": {
-				response = this.forwardMessageFormData(forwardTo, messageWithToken, payload, headerParts);
+//				response = sendDataToBusinessLogicService.sendMessageFormData(forwardTo, messageWithToken, payload, headerParts);
 				break;
 			}
 			case "http-header": {
-				response = this.forwardMessageHttpHeader(forwardTo, payload, headerParts);
+				response = sendDataToBusinessLogicService.sendMessageHttpHeader(forwardTo, multipartMessage, headerParts);
 				break;
 			}
 			default:
@@ -213,144 +191,124 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES,
 						message);
 			}
-		} else {
-			switch (eccHttpSendRouter) {
-			case "mixed": {
-				response = forwardMessageBinary(forwardTo, header, payload, headerParts);
-				break;
-			}
-			case "form": {
-				response = this.forwardMessageFormData(forwardTo, header, payload, headerParts);
-				break;
-			}
-			case "http-header": {
-				response = this.forwardMessageHttpHeader(forwardTo, payload, headerParts);
-				break;
-			}
-			default:
-				logger.error("Applicaton property: application.eccHttpSendRouter is not properly set");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES,
-						message);
-			}
-		}
 		return response;
 	}
 
-	private CloseableHttpResponse forwardMessageHttpHeader(String address, String payload,
-			Map<String, Object> headerParts) throws IOException {
-		logger.info("Forwarding Message: Body: http-header");
-
-		// Set F address
-		HttpPost httpPost = new HttpPost(address);
-
-		// Add header message part to the http headers
-//		if (isEnabledDapsInteraction) {
-//			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithToken(header));
-//		}else {
-//			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithoutToken(header));
+//	private CloseableHttpResponse forwardMessageHttpHeader(String address, String payload,
+//			Map<String, Object> headerParts) throws IOException {
+//		logger.info("Forwarding Message: Body: http-header");
+//
+//		// Set F address
+//		HttpPost httpPost = new HttpPost(address);
+//
+//		// Add header message part to the http headers
+////		if (isEnabledDapsInteraction) {
+////			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithToken(header));
+////		}else {
+////			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithoutToken(header));
+////		}
+//
+//		addHeadersToHttpPost(headerParts, httpPost);
+//		
+//		if (payload != null) {
+//			StringEntity payloadEntity = new StringEntity(payload, 
+//					ContentType.create((String)headerParts.get("Content-Type")));
+//			httpPost.setEntity(payloadEntity);
 //		}
+//		CloseableHttpResponse response;
+//
+//		try {
+//			response = getHttpClient().execute(httpPost);
+//		} catch (IOException e) {
+//			logger.error("Error while calling Consumer", e);
+//			return null;
+//		} 
+//		return response;
+//	}
 
-		addHeadersToHttpPost(headerParts, httpPost);
-		
-		if (payload != null) {
-			StringEntity payloadEntity = new StringEntity(payload, 
-					ContentType.create((String)headerParts.get("Content-Type")));
-			httpPost.setEntity(payloadEntity);
-		}
-		CloseableHttpResponse response;
+//	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload,
+//			Map<String, Object> headerParts) throws UnsupportedEncodingException {
+//		logger.info("Forwarding Message: Body: binary");
+//
+//		// Covert to ContentBody
+//		ContentBody cbHeader = this.convertToContentBody(header, ContentType.DEFAULT_TEXT, "header");
+//		ContentBody cbPayload = null;
+//
+//		if (payload != null) {
+//			cbPayload = convertToContentBody(payload, ContentType.DEFAULT_TEXT, "payload");
+//		}
+//
+//		// Set F address
+//		HttpPost httpPost = new HttpPost(address);
+//		addHeadersToHttpPost(headerParts, httpPost);
+//
+//		HttpEntity reqEntity = payload == null ? MultipartEntityBuilder.create().addPart("header", cbHeader).build()
+//				: MultipartEntityBuilder.create().addPart("header", cbHeader).addPart("payload", cbPayload).build();
+//
+//		httpPost.setEntity(reqEntity);
+//
+//		CloseableHttpResponse response;
+//		try {
+//			response = getHttpClient().execute(httpPost);
+//		} catch (IOException e) {
+//			logger.error(e);
+//			return null;
+//		}
+//
+//		return response;
+//	}
 
-		try {
-			response = getHttpClient().execute(httpPost);
-		} catch (IOException e) {
-			logger.error("Error while calling Consumer", e);
-			return null;
-		} 
-		return response;
-	}
+//	private void addHeadersToHttpPost(Map<String, Object> headesParts, HttpPost httpPost) {
+//		HeaderCleaner.removeTechnicalHeaders(headesParts);
+//
+//		headesParts.forEach((name, value) -> {
+//			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
+//				if (value != null) {
+//					httpPost.setHeader(name, value.toString());
+//				} else {
+//					httpPost.setHeader(name, null);
+//				}
+//
+//			}
+//		});
+//	}
 
-	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload,
-			Map<String, Object> headerParts) throws UnsupportedEncodingException {
-		logger.info("Forwarding Message: Body: binary");
+//	private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload,
+//			Map<String, Object> headesParts) throws ClientProtocolException, IOException {
+//		logger.info("Forwarding Message: Body: form-data");
+//
+//		// Set F address
+//		HttpPost httpPost = new HttpPost(address);
+//		addHeadersToHttpPost(headesParts, httpPost);
+//		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
+//		httpPost.setEntity(reqEntity);
+//
+//		CloseableHttpResponse response;
+//
+//		try {
+//			response = getHttpClient().execute(httpPost);
+//		} catch (IOException e) {
+//			logger.error(e);
+//			return null;
+//		}
+//		return response;
+//	}
 
-		// Covert to ContentBody
-		ContentBody cbHeader = this.convertToContentBody(header, ContentType.DEFAULT_TEXT, "header");
-		ContentBody cbPayload = null;
+//	private ContentBody convertToContentBody(String value, ContentType contentType, String valueName)
+//			throws UnsupportedEncodingException {
+//		byte[] valueBiteArray = value.getBytes("utf-8");
+//		ContentBody cbValue = new ByteArrayBody(valueBiteArray, contentType, valueName);
+//		return cbValue;
+//	}
 
-		if (payload != null) {
-			cbPayload = convertToContentBody(payload, ContentType.DEFAULT_TEXT, "payload");
-		}
-
-		// Set F address
-		HttpPost httpPost = new HttpPost(address);
-		addHeadersToHttpPost(headerParts, httpPost);
-
-		HttpEntity reqEntity = payload == null ? MultipartEntityBuilder.create().addPart("header", cbHeader).build()
-				: MultipartEntityBuilder.create().addPart("header", cbHeader).addPart("payload", cbPayload).build();
-
-		httpPost.setEntity(reqEntity);
-
-		CloseableHttpResponse response;
-		try {
-			response = getHttpClient().execute(httpPost);
-		} catch (IOException e) {
-			logger.error(e);
-			return null;
-		}
-
-		return response;
-	}
-
-	private void addHeadersToHttpPost(Map<String, Object> headesParts, HttpPost httpPost) {
-		HeaderCleaner.removeTechnicalHeaders(headesParts);
-
-		headesParts.forEach((name, value) -> {
-			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
-				if (value != null) {
-					httpPost.setHeader(name, value.toString());
-				} else {
-					httpPost.setHeader(name, null);
-				}
-
-			}
-		});
-	}
-
-	private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload,
-			Map<String, Object> headesParts) throws ClientProtocolException, IOException {
-		logger.info("Forwarding Message: Body: form-data");
-
-		// Set F address
-		HttpPost httpPost = new HttpPost(address);
-		addHeadersToHttpPost(headesParts, httpPost);
-		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
-		httpPost.setEntity(reqEntity);
-
-		CloseableHttpResponse response;
-
-		try {
-			response = getHttpClient().execute(httpPost);
-		} catch (IOException e) {
-			logger.error(e);
-			return null;
-		}
-		return response;
-	}
-
-	private ContentBody convertToContentBody(String value, ContentType contentType, String valueName)
-			throws UnsupportedEncodingException {
-		byte[] valueBiteArray = value.getBytes("utf-8");
-		ContentBody cbValue = new ByteArrayBody(valueBiteArray, contentType, valueName);
-		return cbValue;
-	}
-
-	private CloseableHttpClient getHttpClient() {
-		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
-
-		CloseableHttpClient httpClient = HttpClientGenerator.get(config, isJettySSLEnabled);
-		logger.warn("Created Accept-All Http Client");
-
-		return httpClient;
-	}
+//	private CloseableHttpClient getHttpClient() {
+//		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
+//
+//		CloseableHttpClient httpClient = HttpClientGenerator.get(config, isJettySSLEnabled);
+//		logger.warn("Created Accept-All Http Client");
+//
+//		return httpClient;
+//	}
 
 	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String forwardTo,
 			String multipartMessageBody) throws UnsupportedOperationException, IOException {
