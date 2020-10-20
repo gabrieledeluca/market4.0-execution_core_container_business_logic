@@ -59,7 +59,7 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 			String header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
 
 			MultipartMessage multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload).withHttpHeader(headerContentHeaders).build();
-			headersParts.put("Payload-Content-Type", multipartMessage.getPayloadHeader().get(MultipartMessageKey.CONTENT_TYPE.label));
+			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));
 
 			// Return exchange
 

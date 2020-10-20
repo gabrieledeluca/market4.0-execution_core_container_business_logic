@@ -112,7 +112,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 		// Camel SSL - Endpoint: B
 		if(!isEnabledIdscp && !isEnabledWebSocket) {
 			from("jetty://https4://0.0.0.0:" + configuration.getCamelConsumerPort() + "/incoming-data-channel/receivedMessage")
-					.process(httpHeaderProcessor)
+//					.process(httpHeaderProcessor)
 					.process(multiPartMessageProcessor)
 					.choice()
 					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
@@ -124,7 +124,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 						.when(header("Is-Enabled-DataApp-WebSocket").isEqualTo(false))
 							.process(sendDataToDataAppProcessor)
 						.endChoice()
-//						.process(multiPartMessageProcessor)
+						.process(multiPartMessageProcessor)
 						.process(getTokenFromDapsProcessor)
 						.process(consumerUsageControlProcessor)
 						.process(sendDataToBusinessLogicProcessor)
@@ -140,7 +140,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 						.when(header("Is-Enabled-DataApp-WebSocket").isEqualTo(false))
 							.process(sendDataToDataAppProcessor)
 						.endChoice()
-//						.process(multiPartMessageProcessor)
+						.process(multiPartMessageProcessor)
 						.process(consumerUsageControlProcessor)
 						.process(sendDataToBusinessLogicProcessor)
 						.choice()
