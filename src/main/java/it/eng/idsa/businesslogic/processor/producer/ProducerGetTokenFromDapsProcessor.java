@@ -48,7 +48,7 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 
 	@Autowired
 	private DapsService dapsService;
-	
+
 	@Autowired
 	private HttpHeaderService httpHeaderService;
 
@@ -59,30 +59,16 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 	public void process(Exchange exchange) throws Exception {
 
 		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
-		//the line below is temporary until doing the change for http-headers
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		Message message = null;
 
 		// Get message id
-		try {
-			if (eccHttpSendRouter.equals("http-header")) {
-				logger.info("message id=" + headersParts.get("IDS-Id"));
-//				String header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
-//				message = multipartMessageService.getMessage(header);
-			} else {
-				message = multipartMessageService.getMessage(multipartMessage.getHeaderContentString());
-				logger.info("message id=" + message.getId());
-			}
-		} catch (Exception e) {
-			logger.error("Error parsing multipart message:" + e);
-			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, message);
-		}
-
-		if (message==null) {
-			logger.error("Parsed multipart message is null");
-			rejectionMessageService.sendRejectionMessage(
-					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
-					message);
+		if (eccHttpSendRouter.equals("http-header")) {
+			logger.info("message id=" + multipartMessage.getHttpHeaders().get("IDS-Id"));
+			message = multipartMessage.getHeaderContent();
+		} else {
+			message = multipartMessageService.getMessage(multipartMessage.getHeaderContentString());
+			logger.info("message id=" + message.getId());
 		}
 
 		// Get the Token from the DAPS
@@ -107,18 +93,15 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 
 		logger.info("token=" + token);
 		if (eccHttpSendRouter.equals("http-header")) {
-			multipartMessage.getHttpHeaders().put("daps-token", token);
+			transformJWTTokenToHeaders(token, multipartMessage.getHttpHeaders());
 		} else {
 			String messageStringWithToken = multipartMessageService.addToken(message, token);
 			logger.info("messageStringWithToken=" + messageStringWithToken);
 
-			multipartMessage = new MultipartMessageBuilder()
-					.withHttpHeader(multipartMessage.getHttpHeaders())
-					.withHeaderHeader(multipartMessage.getHeaderHeader())
-					.withHeaderContent(messageStringWithToken)
+			multipartMessage = new MultipartMessageBuilder().withHttpHeader(multipartMessage.getHttpHeaders())
+					.withHeaderHeader(multipartMessage.getHeaderHeader()).withHeaderContent(messageStringWithToken)
 					.withPayloadHeader(multipartMessage.getPayloadHeader())
-					.withPayloadContent(multipartMessage.getPayloadContent())
-					.build();
+					.withPayloadContent(multipartMessage.getPayloadContent()).build();
 		}
 		// Return exchange
 		exchange.getOut().setBody(multipartMessage);
@@ -126,16 +109,16 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 
 	}
 
-	private void transformJWTTokenToHeaders(String token, Map<String, Object> headersPart)
+	private void transformJWTTokenToHeaders(String token, Map<String, String> headersPart)
 			throws JsonMappingException, JsonProcessingException, ParseException {
 		Token tokenJsonValue = new TokenBuilder()._tokenFormat_(TokenFormat.JWT)._tokenValue_(token).build();
 		String tokenValueSerialized = new Serializer().serializePlainJson(tokenJsonValue);
 		JSONParser parser = new JSONParser();
 		JSONObject jsonObjectToken = (JSONObject) parser.parse(tokenValueSerialized);
 
-		headersPart.put("IDS-SecurityToken-Type", jsonObjectToken.get("@type"));
-		headersPart.put("IDS-SecurityToken-Id", tokenJsonValue.getId());
-		headersPart.put("IDS-SecurityToken-TokenFormat", tokenJsonValue.getTokenFormat());
+		headersPart.put("IDS-SecurityToken-Type", jsonObjectToken.get("@type").toString());
+		headersPart.put("IDS-SecurityToken-Id", tokenJsonValue.getId().toString());
+		headersPart.put("IDS-SecurityToken-TokenFormat", tokenJsonValue.getTokenFormat().toString());
 		headersPart.put("IDS-SecurityToken-TokenValue", token);
 	}
 

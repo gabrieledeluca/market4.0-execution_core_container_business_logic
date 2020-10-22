@@ -35,53 +35,18 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 
 	@Autowired
 	private MultipartMessageService multipartMessageService;
-	
+
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
-	
+
 	@Autowired
 	private HttpHeaderService headerService;
-	
+
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
-	
+
 	@Override
 	public void process(Exchange exchange) throws Exception {
-//		
-//		String header;
-//		String payload;
-//		Message message=null;
-//		Map<String, Object> multipartMessageParts = new HashMap<String, Object>();
-//		
-//		// Get multipart message from the input "exchange"
-//		String multipartMessage = exchange.getIn().getBody(String.class);
-//		if(multipartMessage == null) {
-//			logger.error("Multipart message is null");
-//			rejectionMessageService.sendRejectionMessage(
-//					RejectionMessageType.REJECTION_MESSAGE_COMMON, 
-//					message);
-//		}
-//		try {
-//			// Create multipart message parts
-//			header=multipartMessageService.getHeaderContentString(multipartMessage);
-//			multipartMessageParts.put("header", header);
-//			if(multipartMessageService.getPayloadContent(multipartMessage)!=null) {
-//				payload=multipartMessageService.getPayloadContent(multipartMessage);
-//				multipartMessageParts.put("payload", payload);
-//			}
-//			message=multipartMessageService.getMessage(multipartMessageParts.get("header"));
-//			
-//			exchange.getOut().setHeaders(exchange.getIn().getHeaders());
-//			// Return multipartMessageParts
-//			exchange.getOut().setBody(multipartMessageParts);
-//		} catch (Exception e) {
-//			logger.error("Error parsing multipart message:", e);
-//			rejectionMessageService.sendRejectionMessage(
-//					RejectionMessageType.REJECTION_MESSAGE_COMMON, 
-//					message);
-//			
-//		}
-		
 
 		String header = null;
 		String payload = null;
@@ -89,7 +54,6 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 		Message message = null;
 		MultipartMessage multipartMessage = null;
 		Map<String, String> headerContentHeaders = null;
-
 
 		if (eccHttpSendRouter.equals("http-header")) {
 
@@ -143,8 +107,12 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 				if (headersParts.containsKey("Original-Message-Header"))
 					headersParts.put("Original-Message-Header", headersParts.get("Original-Message-Header").toString());
 
-				DataHandler dtHeader = (DataHandler) headersParts.get("header");
-				header = IOUtils.toString(dtHeader.getInputStream());
+				if (headersParts.get("header") instanceof String) {
+					header = headersParts.get("header").toString();
+				} else {
+					DataHandler dtHeader = (DataHandler) headersParts.get("header");
+					header = IOUtils.toString(dtHeader.getInputStream());
+				}
 
 				payload = headersParts.get("payload").toString();
 
@@ -162,8 +130,7 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 
 		exchange.getOut().setHeaders(headersParts);
 		exchange.getOut().setBody(multipartMessage);
-		
-		
+
 	}
 
 }

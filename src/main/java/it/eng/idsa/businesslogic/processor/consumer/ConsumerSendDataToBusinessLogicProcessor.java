@@ -52,6 +52,7 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 		if (eccHttpSendRouter.equals("http-header")) {
 			responseString = multipartMessage.getPayloadContent();
 			contentType = headersParts.get("Payload-Content-Type").toString();
+			headersParts.putAll(multipartMessage.getHttpHeaders());
 		} else {
 			responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
 			contentType = headersParts.getOrDefault("Content-Type", "multipart/mixed").toString();
@@ -64,7 +65,6 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 			responseMessageServerBean.add(responseString.getBytes());
 		}
 
-		HeaderCleaner.removeTechnicalHeaders(headersParts);
 		if (isEnabledClearingHouse) {
 			// Put in the header value of the application.property:
 			// application.isEnabledClearingHouse
@@ -73,6 +73,7 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 		if (isEnabledWebSocket) {
 			headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledWebSocket);
 		}
+		HeaderCleaner.removeTechnicalHeaders(headersParts);
 		headersParts.put("Content-Type", contentType);
 		exchange.getOut().setBody(responseString);
 		exchange.getOut().setHeaders(headersParts);

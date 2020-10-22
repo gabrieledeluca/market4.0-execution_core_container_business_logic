@@ -51,7 +51,7 @@ public class ConsumerValidateTokenProcessor implements Processor {
 		
 		String token = null;
 		if (eccHttpSendRouter.equals("http-header")) {
-			token = exchange.getIn().getHeader("IDS-SecurityToken-TokenValue").toString();
+			token = multipartMessage.getHttpHeaders().get("IDS-SecurityToken-TokenValue");
 		}else {
 			// Get "multipartMessageParts" from the input "exchange"
 //			multipartMessageParts = exchange.getIn().getBody(HashMap.class);

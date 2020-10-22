@@ -127,9 +127,12 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 				if (headersParts.containsKey("Original-Message-Header"))
 					headersParts.put("Original-Message-Header", headersParts.get("Original-Message-Header").toString());
 
-				DataHandler dtHeader = (DataHandler) headersParts.get("header");
-				header = IOUtils.toString(dtHeader.getInputStream());
-
+				if (headersParts.get("header") instanceof String) {
+					header = headersParts.get("header").toString();
+				}else {
+					DataHandler dtHeader = (DataHandler) headersParts.get("header");
+					header = IOUtils.toString(dtHeader.getInputStream());
+				}
 				payload = headersParts.get("payload").toString();
 
 				multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload)

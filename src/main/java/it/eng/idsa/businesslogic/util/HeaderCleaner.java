@@ -33,16 +33,4 @@ public class HeaderCleaner {
 		}
 	}
 	
-	public static void removeTechnicalHeadersMapString(Map<String, String> headers) {
-
-		List<String> technicalHeadersList = Arrays.asList(technicalHeaders.split(","));
-
-		for (String technicalHeader : technicalHeadersList) {
-			if (headers.containsKey(technicalHeader)) {
-				logger.debug("==============Technical header=========================="+ technicalHeader);
-				headers.remove(technicalHeader);
-			}
-		}
-	}
-
 }

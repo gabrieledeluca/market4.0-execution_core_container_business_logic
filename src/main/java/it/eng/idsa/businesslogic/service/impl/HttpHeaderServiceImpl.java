@@ -189,7 +189,14 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		}
 		if (headersParts.get("IDS-CorrelationMessage") != null) {
 			headerContentHeaders.put("IDS-CorrelationMessage", headersParts.get("IDS-CorrelationMessage").toString());
-		}		
+		}	
+		
+		if (isEnabledDapsInteraction && headersParts.get("IDS-SecurityToken-TokenValue") != null) {
+			headerContentHeaders.put("IDS-SecurityToken-Type", headersParts.get("IDS-SecurityToken-Type").toString());
+			headerContentHeaders.put("IDS-SecurityToken-Id", headersParts.get("IDS-SecurityToken-Id").toString());
+			headerContentHeaders.put("IDS-SecurityToken-TokenFormat", headersParts.get("IDS-SecurityToken-TokenFormat").toString());
+			headerContentHeaders.put("IDS-SecurityToken-TokenValue", headersParts.get("IDS-SecurityToken-TokenValue").toString());
+		}
 		
 		return headerContentHeaders;
 	}
