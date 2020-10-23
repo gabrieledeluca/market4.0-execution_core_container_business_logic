@@ -14,10 +14,13 @@ public interface SendDataToBusinessLogicService {
 	CloseableHttpResponse sendMessageBinary(String address, MultipartMessage message, Map<String, Object> httpHeaders)
 			throws UnsupportedEncodingException, JsonProcessingException;
 
-	CloseableHttpResponse sendMessageFormData(String address, String header, String payload,
-			Map<String, Object> headesParts);
+//	CloseableHttpResponse sendMessageFormData(String address, String header, String payload,
+//			Map<String, Object> headesParts);
 
 	CloseableHttpResponse sendMessageHttpHeader(String address, MultipartMessage multipartMessage,
 			Map<String, Object> headerParts);
+	
+	CloseableHttpResponse sendMessageFormData(String address, MultipartMessage message,
+			Map<String, Object> headerParts) throws UnsupportedEncodingException;
 
 }

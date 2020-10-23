@@ -97,18 +97,17 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 
 		String messageWithToken = null;
 
-		String header = null;
 		String payload = null;
 		Message message = null;
+		String header =null;
 
 		String multipartMessageString = null;
-		header = multipartMessage.getHeaderContentString();
 		payload = multipartMessage.getPayloadContent();
-
-		message = multipartMessageService.getMessage(header);
+		header= multipartMessage.getHeaderContentString();
+		message = multipartMessage.getHeaderContent();
 
 		//message needed for clearing house usage
-		MultipartMessage multipartMessageForClearinghouse = new MultipartMessageBuilder().withHeaderContent(header)
+		MultipartMessage multipartMessageForClearinghouse = new MultipartMessageBuilder().withHeaderContent(message)
 				.withPayloadContent(payload).build();
 		multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessageForClearinghouse);
 
@@ -179,7 +178,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 				break;
 			}
 			case "form": {
-//				response = sendDataToBusinessLogicService.sendMessageFormData(forwardTo, messageWithToken, payload, headerParts);
+				response =sendDataToBusinessLogicService.sendMessageFormData(forwardTo, multipartMessage, headerParts);
 				break;
 			}
 			case "http-header": {

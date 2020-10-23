@@ -98,27 +98,27 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 		return response;
 	}
 
-	@Override
-	public CloseableHttpResponse sendMessageFormData(String address, String header, String payload,
-			Map<String, Object> headesParts) {
-		logger.info("Forwarding Message: Body: form-data");
-
-		// Set F address
-		HttpPost httpPost = new HttpPost(address);
-		addHeadersToHttpPost(headesParts, httpPost);
-		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
-		httpPost.setEntity(reqEntity);
-
-		CloseableHttpResponse response;
-
-		try {
-			response = getHttpClient().execute(httpPost);
-		} catch (IOException e) {
-			logger.error(e);
-			return null;
-		}
-		return response;
-	}
+//	@Override
+//	public CloseableHttpResponse sendMessageFormData(String address, String header, String payload,
+//			Map<String, Object> headesParts) {
+//		logger.info("Forwarding Message: Body: form-data");
+//
+//		// Set F address
+//		HttpPost httpPost = new HttpPost(address);
+//		addHeadersToHttpPost(headesParts, httpPost);
+//		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
+//		httpPost.setEntity(reqEntity);
+//
+//		CloseableHttpResponse response;
+//
+//		try {
+//			response = getHttpClient().execute(httpPost);
+//		} catch (IOException e) {
+//			logger.error(e);
+//			return null;
+//		}
+//		return response;
+//	}
 
 	@Override
 	public CloseableHttpResponse sendMessageHttpHeader(String address, MultipartMessage multipartMessage,
@@ -202,6 +202,43 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 
 			}
 		});
+	}
+
+	@Override
+	public CloseableHttpResponse sendMessageFormData(String address, MultipartMessage message,
+			Map<String, Object> headerParts) throws UnsupportedEncodingException {
+		
+		String header = message.getHeaderContentString();
+		String payload = message.getPayloadContent();
+		Message messageForException = message.getHeaderContent();
+		
+		HttpPost httpPost = new HttpPost(address);
+		
+		ContentType ctPayload;
+
+		if (headerParts.get("payload.org.eclipse.jetty.servlet.contentType") != null) {
+			ctPayload = ContentType
+					.parse(headerParts.get("payload.org.eclipse.jetty.servlet.contentType").toString());
+		} else {
+			ctPayload = ContentType.TEXT_PLAIN;
+		}
+		if (message.getPayloadContent() != null) {
+			StringEntity payloadEntity = new StringEntity(message.getPayloadContent(),ctPayload);
+			httpPost.setEntity(payloadEntity);
+		}
+		addHeadersToHttpPost(headerParts, httpPost);
+		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null,ctPayload);
+		httpPost.setEntity(reqEntity);
+		CloseableHttpResponse response=null;
+		
+		try {
+			response = getHttpClient().execute(httpPost);
+		} catch (IOException e) {
+			logger.error(e);
+			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_COMMUNICATION_LOCAL_ISSUES,
+					messageForException);
+		}
+		return response;
 	}
 
 }

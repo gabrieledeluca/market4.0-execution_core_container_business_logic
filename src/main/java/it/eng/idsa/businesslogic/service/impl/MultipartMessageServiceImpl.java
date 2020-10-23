@@ -6,6 +6,7 @@ import java.io.IOException;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.FormBodyPart;
+import org.apache.http.entity.mime.FormBodyPartBuilder;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ContentBody;
@@ -123,7 +124,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 	}
 
 	@Override
-	public HttpEntity createMultipartMessage(String header, String payload, String frowardTo) {
+	public HttpEntity createMultipartMessage(String header, String payload, String frowardTo,ContentType ctPayload) {
 		MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
 		multipartEntityBuilder.addTextBody("header", header);
 		if(payload != null) {
@@ -136,40 +137,47 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 		multipartEntityBuilder = MultipartEntityBuilder.create().setMode(HttpMultipartMode.STRICT);
 		try {
 			FormBodyPart bodyHeaderPart;
-
-			bodyHeaderPart = new FormBodyPart("header", new StringBody(header, ContentType.DEFAULT_TEXT)) {
-				@Override
-				protected void generateContentType(ContentBody body) {
-				}
-				@Override
-				protected void generateTransferEncoding(ContentBody body){
-				}
-			};
+			ContentBody headerBody = new StringBody(header, ContentType.APPLICATION_JSON);
+			bodyHeaderPart = FormBodyPartBuilder.create("header", headerBody).build();
+			 
+//			bodyHeaderPart = new FormBodyPart("header", new StringBody(header, ContentType.DEFAULT_TEXT)) {
+//				@Override
+//				protected void generateContentType(ContentBody body) {
+//				}
+//				@Override
+//				protected void generateTransferEncoding(ContentBody body){
+//				}
+//			};
 			bodyHeaderPart.addField("Content-Lenght", ""+header.length());
 
 			FormBodyPart bodyPayloadPart=null;
 			if(payload != null) {
-				bodyPayloadPart=new FormBodyPart("payload", new StringBody(payload, ContentType.DEFAULT_TEXT)) {
-					@Override
-					protected void generateContentType(ContentBody body) {
-					}
-					@Override
-					protected void generateTransferEncoding(ContentBody body){
-					}
-				};
+				ContentBody payloadBody = new StringBody(payload, ctPayload);
+				bodyPayloadPart = FormBodyPartBuilder.create("payload", payloadBody).build();
+		
+//				bodyPayloadPart=new FormBodyPart("payload", new StringBody(payload, ContentType.DEFAULT_TEXT)) {
+//					@Override
+//					protected void generateContentType(ContentBody body) {
+//					}
+//					@Override
+//					protected void generateTransferEncoding(ContentBody body){
+//					}
+//				};
 				bodyPayloadPart.addField("Content-Lenght", ""+payload.length());
 			}
 
 			FormBodyPart headerForwardTo=null;
 			if(frowardTo!=null) {
-				headerForwardTo=new FormBodyPart("forwardTo", new StringBody(frowardTo, ContentType.DEFAULT_TEXT)) {
-					@Override
-					protected void generateContentType(ContentBody body) {
-					}
-					@Override
-					protected void generateTransferEncoding(ContentBody body){
-					}
-				};
+				ContentBody forwardToBody = new StringBody(frowardTo, ContentType.DEFAULT_TEXT);
+				headerForwardTo = FormBodyPartBuilder.create("forwardTo", forwardToBody).build();
+//				headerForwardTo=new FormBodyPart("forwardTo", new StringBody(frowardTo, ContentType.DEFAULT_TEXT)) {
+//					@Override
+//					protected void generateContentType(ContentBody body) {
+//					}
+//					@Override
+//					protected void generateTransferEncoding(ContentBody body){
+//					}
+//				};
 				headerForwardTo.addField("Content-Lenght", ""+frowardTo.length());
 			}
 

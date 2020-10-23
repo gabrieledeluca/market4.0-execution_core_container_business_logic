@@ -120,7 +120,8 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 			break;
 		}
 		case "form": {
-			response = forwardMessageFormData(configuration.getOpenDataAppReceiver(), header, payload, headerParts);
+			//response = forwardMessageFormData(configuration.getOpenDataAppReceiver(), header, payload, headerParts);
+			response = sendDataToBusinessLogicService.sendMessageFormData(configuration.getOpenDataAppReceiver(), multipartMessage, headerParts);
 			break;
 		}
 		case "http-header":
@@ -221,8 +222,8 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
 		addHeadersToHttpPost(headerParts, httpPost);
-
-		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
+		//TODO izracunati pravu vrednost ctPAyload
+		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null,ContentType.DEFAULT_TEXT);
 		httpPost.setEntity(reqEntity);
 
 		CloseableHttpResponse response;
