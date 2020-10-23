@@ -16,6 +16,8 @@ import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationA;
 import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.service.impl.HttpHeaderServiceImpl;
+import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
@@ -51,6 +53,10 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 	public void process(Exchange exchange) throws Exception {
 
 		Map<String, Object> headerParts = exchange.getIn().getHeaders();
+		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
+		
+		String responseString = null;
+		String contentType = null;
 
 		// Put in the header value of the application.property:
 		// application.isEnabledClearingHouse
@@ -59,39 +65,19 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 		if (openDataAppReceiverRouter.equals("http-header")) {
 			removeTokenFromHeaders(headerParts);
 			if (!isEnabledClearingHouse) {
-				// clear from Headers multipartMessageBody (it is not unusable for the Open Data App)
+				// clear from Headers multipartMessageBody (it is not usable for the Open Data App)
 				headerParts.remove("multipartMessageBody");
 				headerParts.remove("Is-Enabled-Clearing-House");
 			}
-			exchange.getOut().setBody(exchange.getIn().getBody());
+			responseString = multipartMessage.getPayloadContent();
+			contentType = headerParts.get("Payload-Content-Type").toString();
 		} else {
 
-			Map<String, Object> multipartMessagePartsReceived = exchange.getIn().getBody(HashMap.class);
-
-			String header = null;
-			String payload = null;
-			if (multipartMessagePartsReceived.get("payload") != null) {
-				payload = multipartMessagePartsReceived.get("payload").toString();
-				if (payload.equals("RejectionMessage\n")) {
-					header = this.filterRejectionMessageHeader(multipartMessagePartsReceived.get("header").toString());
-					payload = null;
-				} else {
-					header = this.filterHeader(multipartMessagePartsReceived.get("header").toString());
-					payload = multipartMessagePartsReceived.get("payload").toString();
-				}
-			} else {
-				header = this.filterHeader(multipartMessagePartsReceived.get("header").toString());
+			responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
+			contentType = headerParts.getOrDefault("Content-Type", "multipart/mixed").toString();
 			}
 
-			// Prepare response
-			MultipartMessage multipartMessage = new MultipartMessageBuilder().withHeaderContent(header)
-					.withPayloadContent(payload).build();
-			String responseMultipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage,
-					false);
-
-			String contentType = multipartMessage.getHttpHeaders().getOrDefault("Content-Type", "multipart/mixed");
-			headerParts.put("Content-Type", contentType);
-
+			
 			if (!isEnabledClearingHouse) {
 				// clear from Headers multipartMessageBody (it is not unusable for the Open Data App)
 				headerParts.remove("multipartMessageBody");
@@ -99,13 +85,17 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 			}
 
 			// TODO: Send The MultipartMessage message to the WebSocket
-			if (isEnabledWebSocket && !isEnabledUsageControl) {
-				ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration
-						.responseMessageBufferWebSocket();
-				responseMessageServerBean.add(responseMultipartMessageString.getBytes());
-			}
-			exchange.getOut().setBody(responseMultipartMessageString);
-		}
+//			if (isEnabledWebSocket && !isEnabledUsageControl) {
+//				ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration
+//						.responseMessageBufferWebSocket();
+//				responseMessageServerBean.add(responseMultipartMessageString.getBytes());
+//			}
+//			exchange.getOut().setBody(responseMultipartMessageString);
+		
+		
+		HeaderCleaner.removeTechnicalHeaders(headerParts);
+		headerParts.put("Content-Type", contentType);
+		exchange.getOut().setBody(responseString);
 		exchange.getOut().setHeaders(headerParts);
 
 	}

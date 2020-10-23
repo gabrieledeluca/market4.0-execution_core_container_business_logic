@@ -17,6 +17,7 @@ import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.domain.MultipartMessage;
 
 /**
  * 
@@ -47,18 +48,15 @@ public class ProducerValidateTokenProcessor implements Processor {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		
-		Message message = null;
-		
-		Map<String, Object> multipartMessageParts = null;
+		Map<String, Object> headersParts = exchange.getIn().getHeaders();
+		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 		
 		String token = null;
+		Message message = null;
 		if (eccHttpSendRouter.equals("http-header")) {
-			token = exchange.getIn().getHeader("IDS-SecurityToken-TokenValue").toString();
+			token = multipartMessage.getHttpHeaders().get("IDS-SecurityToken-TokenValue");
 		}else {
-			// Get "multipartMessageParts" from the input "exchange"
-			multipartMessageParts = exchange.getIn().getBody(HashMap.class);
-			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
-			// Get "token" from the input "multipartMessageParts"
+			message = multipartMessage.getHeaderContent();
 			token = multipartMessageService.getToken(message);
 			
 		}
@@ -66,7 +64,6 @@ public class ProducerValidateTokenProcessor implements Processor {
 		
 		// Check is "token" valid
 		boolean isTokenValid = dapsService.validateToken(token);
-//		boolean isTokenValid = true;
 		
 		if(isTokenValid==false) {			
 			logger.error("Token is invalid");
@@ -76,12 +73,13 @@ public class ProducerValidateTokenProcessor implements Processor {
 		}
 		
 		logger.info("is token valid: "+isTokenValid);
-		exchange.getOut().setHeaders(exchange.getIn().getHeaders());
+		exchange.getOut().setHeaders(headersParts);
 		if (eccHttpSendRouter.equals("http-header")) {
-			exchange.getOut().setBody(exchange.getIn().getBody());
+			exchange.getOut().setBody(multipartMessage);
 		}else {
-			multipartMessageParts.put("isTokenValid", isTokenValid);
-			exchange.getOut().setBody(multipartMessageParts);
+			// not used
+//			multipartMessageParts.put("isTokenValid", isTokenValid);
+			exchange.getOut().setBody(multipartMessage);
 		}
 	}
 

@@ -332,11 +332,17 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			} else {
 				logger.info("data sent to destination " + forwardTo);
 				logger.info("Successful response: " + responseString);
-				// TODO:
-				// Set original body which is created using the original payload and header
+				
+				//TODO make the MultipartMessage here or in the ProducerParseReceivedResponseMessage
 				exchange.getOut().setHeaders(returnHeadersAsMap(response.getAllHeaders()));
+				if (openDataAppReceiverRouter.equals("http-header")) {
+					exchange.getOut().setBody(responseString);
+				}else {
+					exchange.getOut().setHeader("header", multipartMessageService.getHeaderContentString(responseString));
+					exchange.getOut().setHeader("payload", multipartMessageService.getPayloadContent(responseString));
+
+				}
 				exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
-				exchange.getOut().setBody(responseString);
 			}
 		}
 	}

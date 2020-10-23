@@ -210,6 +210,7 @@ public class CamelRouteProducer extends RouteBuilder {
     //						.process(receiveFromActiveMQ)
                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
+                            .process(parseReceivedResponseMessage)
                             .process(validateTokenProcessor)
                             .process(sendResponseToDataAppProcessor)
                             .choice()
@@ -221,6 +222,7 @@ public class CamelRouteProducer extends RouteBuilder {
         //					.process(receiveFromActiveMQ)
                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
+                            .process(parseReceivedResponseMessage)
                             .process(sendResponseToDataAppProcessor)
                             .choice()
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))

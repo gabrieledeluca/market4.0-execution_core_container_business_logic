@@ -43,27 +43,28 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
+		String responseString = null;
+		String contentType = null;
 
 		// Put in the header value of the application.property:
 		// application.isEnabledClearingHouse
 		headersParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 		if (eccHttpSendRouter.equals("http-header")) {
-			exchange.getOut().setBody(exchange.getIn().getBody());
+			responseString = multipartMessage.getPayloadContent();
+			contentType = headersParts.get("Payload-Content-Type").toString();
+			headersParts.putAll(multipartMessage.getHttpHeaders());
 		} else {
-	
+			responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
+			contentType = headersParts.getOrDefault("Content-Type", "multipart/mixed").toString();
+		}
 
-			String responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
-			String contentType = multipartMessage.getHttpHeaders().getOrDefault("Content-Type", "multipart/mixed");
-			headersParts.put("Content-Type", contentType);
-			exchange.getOut().setBody(responseString);
-			// TODO: Send The MultipartMessage message to the WebSocket
-			if (isEnabledIdscp || isEnabledWebSocket) { // TODO Try to remove this config property
-				ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration
-						.responseMessageBufferWebSocket();
-				responseMessageServerBean.add(responseString.getBytes());
-			}
-}
-		HeaderCleaner.removeTechnicalHeaders(headersParts);
+		// TODO: Send The MultipartMessage message to the WebSocket
+		if (isEnabledIdscp || isEnabledWebSocket) { // TODO Try to remove this config property
+			ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration
+					.responseMessageBufferWebSocket();
+			responseMessageServerBean.add(responseString.getBytes());
+		}
+
 		if (isEnabledClearingHouse) {
 			// Put in the header value of the application.property:
 			// application.isEnabledClearingHouse
@@ -72,6 +73,9 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 		if (isEnabledWebSocket) {
 			headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledWebSocket);
 		}
+		HeaderCleaner.removeTechnicalHeaders(headersParts);
+		headersParts.put("Content-Type", contentType);
+		exchange.getOut().setBody(responseString);
 		exchange.getOut().setHeaders(headersParts);
 
 	}

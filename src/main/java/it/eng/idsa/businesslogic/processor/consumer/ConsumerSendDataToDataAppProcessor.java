@@ -38,7 +38,6 @@ import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.businesslogic.util.communication.HttpClientGenerator;
 import it.eng.idsa.businesslogic.util.config.keystore.AcceptAllTruststoreConfig;
 import it.eng.idsa.multipart.domain.MultipartMessage;
-import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 
 /**
  * 
@@ -97,18 +96,6 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		String header = null;
 		String payload = null;
 		Message message = null;
-//		if (!eccHttpSendRouter.equals("http-header")) {
-//			multipartMessageParts = exchange.getIn().getBody(HashMap.class);
-//			header = filterHeader(multipartMessageParts.get("header").toString());
-//		if(multipartMessageParts.containsKey("payload")) {
-//			payload = multipartMessageParts.get("payload").toString();
-//		}
-//			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
-//		} else {
-//			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headerParts);
-//			headerService.removeTokenHeaders(headerParts);
-//			payload = exchange.getIn().getBody(String.class);
-//		}
 
 
 		this.originalHeader = header;
@@ -126,7 +113,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		}
 		case "http-header":
 		{
-			response =  forwardMessageHttpHeader(configuration.getOpenDataAppReceiver(), payload, headerParts);
+			response =  sendDataToBusinessLogicService.sendMessageHttpHeader(configuration.getOpenDataAppReceiver(), multipartMessage, headerParts);
 			break;
 		}
 		default: {
@@ -296,11 +283,17 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 				logger.info("Successful response: "+ responseString);
 
 				exchange.getOut().setHeaders(returnHeadersAsMap(response.getAllHeaders()));
-				MultipartMessage multipartMessage = MultipartMessageProcessor.parseMultipartMessage(responseString);
+				if (openDataAppReceiverRouter.equals("http-header")) {
+					exchange.getOut().setBody(responseString);
+				}else {
+					exchange.getOut().setHeader("header", multipartMessageService.getHeaderContentString(responseString));
+					exchange.getOut().setHeader("payload", multipartMessageService.getPayloadContent(responseString));
+
+				}
+				
 				if(isEnabledUsageControl) {
 					exchange.getOut().setHeader("Original-Message-Header", originalHeader);
 				}
-				exchange.getOut().setBody(multipartMessage);
 			}
 		}
 	}
