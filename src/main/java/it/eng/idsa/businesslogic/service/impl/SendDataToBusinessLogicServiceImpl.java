@@ -189,20 +189,6 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 		});
 	}
 
-	private void addHeadersToHttpPostMapString(Map<String, String> headesParts, HttpPost httpPost) {
-		HeaderCleaner.removeTechnicalHeadersMapString(headesParts);
-
-		headesParts.forEach((name, value) -> {
-			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
-				if (value != null) {
-					httpPost.setHeader(name, value.toString());
-				} else {
-					httpPost.setHeader(name, null);
-				}
-
-			}
-		});
-	}
 
 	@Override
 	public CloseableHttpResponse sendMessageFormData(String address, MultipartMessage message,
