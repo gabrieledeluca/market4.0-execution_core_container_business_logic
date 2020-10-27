@@ -8,6 +8,7 @@ import org.apache.http.entity.ContentType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.multipart.domain.MultipartMessage;
 
 /**
  * 
@@ -17,13 +18,16 @@ import de.fraunhofer.iais.eis.Message;
 
 public interface MultipartMessageService {
 
-	public String getHeaderContentString(String body);
-	public String getPayloadContent(String body);
-	public Message getMessage(String header);
-	public String addToken(Message message, String token);
-	public String removeToken(Message message);
-	public Message getMessage(Object header) throws IOException;
-	public HttpEntity createMultipartMessage(String header, String payload, String frowardTo,ContentType ctPayload);
-	public String getToken(Message message) throws JsonProcessingException;
+	String getHeaderContentString(String body);
+	String getPayloadContent(String body);
+	Message getMessage(String header);
+	String addToken(Message message, String token);
+	String removeToken(Message message);
+	Message getMessage(Object header) throws IOException;
+	HttpEntity createMultipartMessage(String header, String payload, String frowardTo,ContentType ctPayload);
+	String getToken(Message message) throws JsonProcessingException;
+	
+	MultipartMessage addTokenToMultipartMessage(MultipartMessage messageWithoutToken);
+	MultipartMessage removeTokenFromMultipart(MultipartMessage messageWithToken);
 	
 }

@@ -97,8 +97,8 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		String payload = null;
 		Message message = null;
 
-
-		this.originalHeader = header;
+multipartMessage.getHeaderContentString();
+		this.originalHeader = multipartMessage.getHeaderContentString();;
 		// Send data to the endpoint F for the Open API Data App
 		CloseableHttpResponse response = null;
 		switch(openDataAppReceiverRouter) {

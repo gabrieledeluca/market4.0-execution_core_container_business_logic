@@ -39,6 +39,9 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 	@Value("${camel.component.jetty.use-global-ssl-context-parameters}")
 	private boolean isJettySSLEnabled;
 
+	@Value("${application.isEnabledDapsInteraction}")
+	private boolean isEnabledDapsInteraction;
+	
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
 
@@ -46,14 +49,21 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 	private MultipartMessageService multipartMessageService;
 
 	@Override
-	public CloseableHttpResponse sendMessageBinary(String address, MultipartMessage message,
+	public CloseableHttpResponse sendMessageBinary(String address, MultipartMessage multipartMessage,
 			Map<String, Object> headerParts) throws UnsupportedEncodingException, JsonProcessingException {
 
-		String header = message.getHeaderContentString();
-		String payload = message.getPayloadContent();
-		Message messageForExcepiton = message.getHeaderContent();
+		String header = multipartMessage.getHeaderContentString();
+		String payload = multipartMessage.getPayloadContent();
+		Message messageForExcepiton = multipartMessage.getHeaderContent();
 
 		logger.info("Forwarding Message: Body: binary");
+		
+		String message ;
+		if(isEnabledDapsInteraction) {
+			message = multipartMessageService.addToken(multipartMessage.getHeaderContent(), multipartMessage.getToken());
+		} else {
+			message = multipartMessage.getHeaderContentString();
+		}
 
 		ContentType ctPayload;
 
@@ -191,12 +201,22 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 
 
 	@Override
-	public CloseableHttpResponse sendMessageFormData(String address, MultipartMessage message,
+	public CloseableHttpResponse sendMessageFormData(String address, MultipartMessage multipartMessage,
 			Map<String, Object> headerParts) throws UnsupportedEncodingException {
 		
-		String header = message.getHeaderContentString();
-		String payload = message.getPayloadContent();
-		Message messageForException = message.getHeaderContent();
+		logger.info("Forwarding Message: Body: form-data");
+		
+		String header = multipartMessage.getHeaderContentString();
+		String payload = multipartMessage.getPayloadContent();
+		Message messageForException = multipartMessage.getHeaderContent();
+		
+		String message ;
+		if(isEnabledDapsInteraction) {
+			message = multipartMessageService.addToken(multipartMessage.getHeaderContent(), multipartMessage.getToken());
+		} else {
+			message = multipartMessage.getHeaderContentString();
+		}
+		
 		
 		HttpPost httpPost = new HttpPost(address);
 		
@@ -208,8 +228,8 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 		} else {
 			ctPayload = ContentType.TEXT_PLAIN;
 		}
-		if (message.getPayloadContent() != null) {
-			StringEntity payloadEntity = new StringEntity(message.getPayloadContent(),ctPayload);
+		if (multipartMessage.getPayloadContent() != null) {
+			StringEntity payloadEntity = new StringEntity(multipartMessage.getPayloadContent(),ctPayload);
 			httpPost.setEntity(payloadEntity);
 		}
 		addHeadersToHttpPost(headerParts, httpPost);

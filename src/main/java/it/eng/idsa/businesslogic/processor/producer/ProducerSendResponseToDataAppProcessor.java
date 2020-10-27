@@ -72,8 +72,21 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 			responseString = multipartMessage.getPayloadContent();
 			contentType = headerParts.get("Payload-Content-Type").toString();
 		} else {
-
-			responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
+//			
+//				String messageWithoutToken = multipartMessageService.removeToken(multipartMessage.getHeaderContent());
+//						Message msgToken = multipartMessageService.getMessage(messageWithoutToken);
+//				MultipartMessage multipartmessageWithoutToken = new MultipartMessageBuilder()
+//						.withHttpHeader(multipartMessage.getHttpHeaders())
+//						.withHeaderHeader(multipartMessage.getHeaderHeader())
+//						.withHeaderContent(messageWithoutToken)
+//						.withPayloadHeader(multipartMessage.getPayloadHeader())
+//						.withPayloadContent(multipartMessage.getPayloadContent())
+//						.withToken(multipartMessage.getToken()).build(); 
+				MultipartMessage multipartMessageWithoutToken = multipartMessageService.removeTokenFromMultipart(multipartMessage);
+				responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessageWithoutToken, false);
+//				responseString = multipartMessageService.addToken(multipartMessage.getHeaderContent(), multipartMessage.getToken());
+//			responseString = filterHeader(MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false));
+//			responseString = filterHeader(multipartMessage.getHeaderContentString());
 			contentType = headerParts.getOrDefault("Content-Type", "multipart/mixed").toString();
 			}
 

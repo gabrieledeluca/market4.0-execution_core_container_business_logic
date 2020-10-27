@@ -8,9 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationB;
 import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.HeaderCleaner;
+import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
 
@@ -34,6 +38,12 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
+	
+	@Value("${application.isEnabledDapsInteraction}")
+	private boolean isEnabledDapsInteraction;
+	
+	@Autowired
+	private MultipartMessageService multipartMessageService;
 
 	@Autowired(required = false)
 	private WebSocketServerConfigurationB webSocketServerConfiguration;
@@ -54,7 +64,24 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 			contentType = headersParts.get("Payload-Content-Type").toString();
 			headersParts.putAll(multipartMessage.getHttpHeaders());
 		} else {
-			responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
+//			Message msgWithToken = addToken(multipartMessage.getHeaderContent(), multipartMessage.getToken())
+			String message ;
+			if(isEnabledDapsInteraction) {
+//				String messageWithToken = multipartMessageService.addToken(multipartMessage.getHeaderContent(), multipartMessage.getToken());
+//				Message msgToken = multipartMessageService.getMessage(messageWithToken);
+//				MultipartMessage multipartmessageWithToken = new MultipartMessageBuilder()
+//						.withHttpHeader(multipartMessage.getHttpHeaders())
+//						.withHeaderHeader(multipartMessage.getHeaderHeader())
+//						.withHeaderContent(messageWithToken)
+//						.withPayloadHeader(multipartMessage.getPayloadHeader())
+//						.withPayloadContent(multipartMessage.getPayloadContent())
+//						.withToken(multipartMessage.getToken()).build(); 
+				MultipartMessage multipartMessageWithToken = multipartMessageService.addTokenToMultipartMessage(multipartMessage);
+				responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessageWithToken, false);
+//				responseString = multipartMessageService.addToken(multipartMessage.getHeaderContent(), multipartMessage.getToken());
+			} else {
+				responseString = multipartMessage.getHeaderContentString();
+			}
 			contentType = headersParts.getOrDefault("Content-Type", "multipart/mixed").toString();
 		}
 

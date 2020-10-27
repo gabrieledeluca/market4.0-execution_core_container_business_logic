@@ -25,6 +25,7 @@ import it.eng.idsa.businesslogic.service.DapsService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 
 /**
@@ -61,8 +62,10 @@ public class ConsumerGetTokenFromDapsProcessor implements Processor {
 		if (eccHttpSendRouter.equals("http-header")) {
 			logger.info("message id=" + multipartMessage.getHttpHeaders().get("IDS-Id"));
 		} else {
-//				message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+			// message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+			message = multipartMessageService.getMessage(multipartMessage.getHeaderContentString());
 			logger.info("message id=" + message.getId());
+
 		}
 
 		// Get the Token from the DAPS
@@ -92,6 +95,15 @@ public class ConsumerGetTokenFromDapsProcessor implements Processor {
 		} else {
 			String messageStringWithToken = multipartMessageService.addToken(message, token);
 			logger.info("messageStringWithToken=" + messageStringWithToken);
+			
+
+			multipartMessage = new MultipartMessageBuilder()
+					.withHttpHeader(multipartMessage.getHttpHeaders())
+					.withHeaderHeader(multipartMessage.getHeaderHeader())
+					.withHeaderContent(messageStringWithToken)
+					.withPayloadHeader(multipartMessage.getPayloadHeader())
+					.withPayloadContent(multipartMessage.getPayloadContent())
+					.withToken(token).build();
 
 //			multipartMessageParts.put("header", messageStringWithToken);
 //			exchange.getOut().setBody(multipartMessageParts);

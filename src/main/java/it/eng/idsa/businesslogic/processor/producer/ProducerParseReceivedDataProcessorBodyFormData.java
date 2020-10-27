@@ -79,7 +79,7 @@ public class ProducerParseReceivedDataProcessorBodyFormData implements Processor
 			MultipartMessage multipartMessage = new MultipartMessage(
 					receivedDataHeader.entrySet().stream().filter(entry -> entry.getValue() instanceof String)
 							.collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue())),
-					null, message, null, payload, null, null);
+					null, message, null, payload, null, null,null);
 
 			// Return exchange
 			exchange.getOut().setHeaders(headesParts);

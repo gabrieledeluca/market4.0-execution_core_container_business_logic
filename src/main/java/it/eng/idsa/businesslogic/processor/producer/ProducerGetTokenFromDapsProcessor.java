@@ -93,15 +93,19 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 
 		logger.info("token=" + token);
 		if (eccHttpSendRouter.equals("http-header")) {
+			//TODO move this to SendDataToBussinessLogicServiceImpl
 			transformJWTTokenToHeaders(token, multipartMessage.getHttpHeaders());
 		} else {
 			String messageStringWithToken = multipartMessageService.addToken(message, token);
 			logger.info("messageStringWithToken=" + messageStringWithToken);
 
-			multipartMessage = new MultipartMessageBuilder().withHttpHeader(multipartMessage.getHttpHeaders())
-					.withHeaderHeader(multipartMessage.getHeaderHeader()).withHeaderContent(messageStringWithToken)
+			multipartMessage = new MultipartMessageBuilder()
+					.withHttpHeader(multipartMessage.getHttpHeaders())
+					.withHeaderHeader(multipartMessage.getHeaderHeader())
+					.withHeaderContent(messageStringWithToken)
 					.withPayloadHeader(multipartMessage.getPayloadHeader())
-					.withPayloadContent(multipartMessage.getPayloadContent()).build();
+					.withPayloadContent(multipartMessage.getPayloadContent())
+					.withToken(token).build();
 		}
 		// Return exchange
 		exchange.getOut().setBody(multipartMessage);
