@@ -114,6 +114,9 @@ public class ProducerUsageControlProcessor implements Processor {
                     responseMultipartMessageString = MultipartMessageProcessor.
                             multipartMessagetoString(multipartMessage, false);
                 }
+            } else {
+            	// not UsageControll - pass through
+            	responseMultipartMessageString = multipartMessageBody;
             }
             if(isEnabledWebSocket) {
                 ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration.responseMessageBufferWebSocket();

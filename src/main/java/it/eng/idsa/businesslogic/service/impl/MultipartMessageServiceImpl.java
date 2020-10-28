@@ -224,7 +224,6 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 	@Override
 	public MultipartMessage addTokenToMultipartMessage(MultipartMessage messageWithoutToken) {
 		String messageWithToken = addToken(messageWithoutToken.getHeaderContent(), messageWithoutToken.getToken());
-		Message msgToken = getMessage(messageWithToken);
 		return new MultipartMessageBuilder().withHttpHeader(messageWithoutToken.getHttpHeaders())
 				.withHeaderHeader(messageWithoutToken.getHeaderHeader()).withHeaderContent(messageWithToken)
 				.withPayloadHeader(messageWithoutToken.getPayloadHeader())
@@ -235,8 +234,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 	@Override
 	public MultipartMessage removeTokenFromMultipart(MultipartMessage messageWithToken) {
 		String messageWithoutToken = removeToken(messageWithToken.getHeaderContent());
-		Message msgToken = getMessage(messageWithoutToken);
-		return  new MultipartMessageBuilder()
+		return new MultipartMessageBuilder()
 				.withHttpHeader(messageWithToken.getHttpHeaders()).withHeaderHeader(messageWithToken.getHeaderHeader())
 				.withHeaderContent(messageWithoutToken).withPayloadHeader(messageWithToken.getPayloadHeader())
 				.withPayloadContent(messageWithToken.getPayloadContent()).withToken(messageWithToken.getToken())

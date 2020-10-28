@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -32,10 +31,13 @@ import de.fraunhofer.dataspaces.iese.camel.interceptor.model.Meta;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.TargetArtifact;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.UsageControlObject;
 import de.fraunhofer.iais.eis.ArtifactRequestMessage;
+import de.fraunhofer.iais.eis.ArtifactResponseMessage;
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
+import it.eng.idsa.multipart.domain.MultipartMessage;
 
 
 /**
@@ -74,21 +76,25 @@ public class ConsumerUsageControlProcessor implements Processor {
         }
         try {
             Map<String, Object> headerParts = exchange.getIn().getHeaders();
-            Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
+            MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
             String originalHeader = headerParts.get("Original-Message-Header").toString();
-            String header = multipartMessageParts.get("header").toString();
             requestMessage = multipartMessageService.getMessage(originalHeader);
-            responseMessage = multipartMessageService.getMessage(header);
+            responseMessage = multipartMessage.getHeaderContent();
             ArtifactRequestMessage artifactRequestMessage = null;
             if(null == requestMessage || null == responseMessage)
                 throw new Exception("Request or Response messages are empty.");
-            /* TODO
-            if (requestMessage instanceof  ArtifactRequestMessage
-                    && !(responseMessage instanceof ArtifactResponseMessage)
-                    && !(responseMessage instanceof RejectionMessage)) {
+            
+//            if (!(requestMessage instanceof  ArtifactRequestMessage
+//                    && (responseMessage instanceof ArtifactResponseMessage)
+//                    && !(responseMessage instanceof RejectionMessage))) {
+//                throw new Exception("Response Header Type is not compatible with Usage Control Required.");
+//            }
+            if (requestMessage instanceof ArtifactRequestMessage
+                    && !(responseMessage instanceof ArtifactResponseMessage)) {
                 throw new Exception("Response Header Type is not compatible with Usage Control Required.");
+            } else {
+            	isUsageControlObject = false;
             }
-             */
             try {
                 artifactRequestMessage = (ArtifactRequestMessage) requestMessage;
             } catch (Exception e) {
@@ -97,20 +103,24 @@ public class ConsumerUsageControlProcessor implements Processor {
             }
             if (isUsageControlObject) {
                 String payloadToEnforce = createUsageControlObject(artifactRequestMessage.getRequestedArtifact(),
-                        multipartMessageParts.get("payload").toString());
+                        multipartMessage.getPayloadContent().toString());
                 logger.info("from: " + exchange.getFromEndpoint());
                 logger.info("Message Body: " + payloadToEnforce);
                 logger.info("Message Body Out: " + exchange.getOut().getBody(String.class));
 
-                multipartMessageParts.put("payload", payloadToEnforce);
-                exchange.getIn().setBody(multipartMessageParts);
-                exchange.getMessage().setBody(multipartMessageParts);
+                MultipartMessage reponseMultipartMessage = new MultipartMessageBuilder()
+                		.withHttpHeader(multipartMessage.getHttpHeaders()).withHeaderHeader(multipartMessage.getHeaderHeader())
+        				.withHeaderContent(responseMessage).withPayloadHeader(multipartMessage.getPayloadHeader())
+        				.withPayloadContent(payloadToEnforce).withToken(multipartMessage.getToken())
+        				.build();
+                exchange.getIn().setBody(reponseMultipartMessage);
+                exchange.getMessage().setBody(reponseMultipartMessage);
             }
             headerParts.remove("Original-Message-Header");
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setBody(exchange.getIn().getBody());
         } catch (Exception e) {
-            logger.error("Usage Control Enforcement has failed with MESSAGE: ", e.getMessage());
+            logger.error("Usage Control Enforcement has failed with MESSAGE: {}", e.getMessage());
             rejectionMessageService.sendRejectionMessage(
                     RejectionMessageType.REJECTION_USAGE_CONTROL,
                     requestMessage);
