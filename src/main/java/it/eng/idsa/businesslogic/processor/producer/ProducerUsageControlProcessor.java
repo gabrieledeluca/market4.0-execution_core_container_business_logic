@@ -13,6 +13,7 @@ import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationA;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerUsageControlProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
+import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
@@ -56,6 +57,13 @@ public class ProducerUsageControlProcessor implements Processor {
 
     @Autowired(required = false)
     WebSocketServerConfigurationA webSocketServerConfiguration;
+    
+	@Autowired
+	private HttpHeaderService httpHeaderService;
+
+	@Value("${application.eccHttpSendRouter}")
+	private String eccHttpSendRouter;
+
 
     public ProducerUsageControlProcessor() {
         gson = ConsumerUsageControlProcessor.createGson();
@@ -70,10 +78,17 @@ public class ProducerUsageControlProcessor implements Processor {
         }
         Message message = null;
         String responseMultipartMessageString = null;
+        String header = null;
+        String payload = null;
         try {
             String multipartMessageBody = exchange.getIn().getBody().toString();
-            String header = multipartMessageService.getHeaderContentString(multipartMessageBody);
-            String payload = multipartMessageService.getPayloadContent(multipartMessageBody);
+            if (eccHttpSendRouter.equals("http-header")) {
+            	header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(exchange.getIn().getHeaders());
+            	payload = exchange.getIn().getBody(String.class);
+            } else {
+            	header = multipartMessageService.getHeaderContentString(multipartMessageBody);
+            	payload = multipartMessageService.getPayloadContent(multipartMessageBody);
+            }
             message = multipartMessageService.getMessage(header);
             logger.info("from: " + exchange.getFromEndpoint());
             logger.info("Message Body: " + payload);
@@ -114,16 +129,17 @@ public class ProducerUsageControlProcessor implements Processor {
                     responseMultipartMessageString = MultipartMessageProcessor.
                             multipartMessagetoString(multipartMessage, false);
                 }
-            } else {
-            	// not UsageControll - pass through
-            	responseMultipartMessageString = multipartMessageBody;
             }
             if(isEnabledWebSocket) {
                 ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration.responseMessageBufferWebSocket();
                 responseMessageServerBean.add(responseMultipartMessageString.getBytes());
             }
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
-            exchange.getOut().setBody(responseMultipartMessageString);
+            if(eccHttpSendRouter.equals("http-header")) {
+            	exchange.getOut().setBody(extractPayloadFromJson(ucObj.getPayload()));
+            } else {
+            	exchange.getOut().setBody(responseMultipartMessageString);
+            }
         } catch (Exception e) {
             logger.error("Usage Control Enforcement has failed with MESSAGE: ", e.getMessage());
             rejectionMessageService.sendRejectionMessage(
@@ -131,8 +147,16 @@ public class ProducerUsageControlProcessor implements Processor {
                     message);
         }
     }
-
+    
     //TODO
+    /**
+     * Used for purpose PIP
+     * 	@ActionDescription(methodName = "purpose")
+  		public String purpose(
+      		@ActionParameterDescription(name = "MsgTargetAppUri", mandatory = true) String msgTargetAppUri) 
+      		IdsMsgTarget.appUri is translated to msgTargetAppUri
+     * @return
+     */
     public static IdsMsgTarget getIdsMsgTarget() {
         IdsMsgTarget idsMsgTarget = new IdsMsgTarget();
         idsMsgTarget.setName("Anwendung A");

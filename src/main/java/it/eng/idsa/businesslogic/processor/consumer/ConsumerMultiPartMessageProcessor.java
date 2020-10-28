@@ -16,7 +16,6 @@ import org.springframework.stereotype.Component;
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
-import it.eng.idsa.businesslogic.service.ReceiveDataFromBusinessLogicService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
@@ -58,9 +57,6 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
 
-	@Autowired
-	private ReceiveDataFromBusinessLogicService receiveDataFromBusinessLogicService;
-
 	@Override
 	public void process(Exchange exchange) throws Exception {
 
@@ -76,12 +72,9 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledDataAppWebSocket);
 
 		if (eccHttpSendRouter.equals("http-header")) {
-
 			try {
-
 				// header content headers will be set in he http-headers of the MultipartMessage
 				headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
-
 			} catch (Exception e) {
 				logger.error("Mandatory headers of the multipart message header part are missing or null:", e);
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
@@ -93,10 +86,14 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 				logger.error("Payload is null");
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
-
-			multipartMessage = new MultipartMessageBuilder().withHttpHeader(headerContentHeaders)
+			// create Message object from IDS-* headers, needs for UsageControl flow
+			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
+			message = multipartMessageService.getMessage(header);
+			multipartMessage = new MultipartMessageBuilder()
+					.withHttpHeader(headerContentHeaders)
+					.withHeaderContent(message)
+					.withHeaderContent(header)
 					.withPayloadContent(payload).build();
-
 			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));
 
 		} else {

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
@@ -31,6 +32,9 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 	
 	@Autowired
 	private HttpHeaderService headerService;
+	
+	@Autowired
+	MultipartMessageService multipartMessageService;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
@@ -46,23 +50,23 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 		if (payload == null) {
 			logger.error("Body of the received multipart message is null");
 			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, message);
-
 		}
 		
 		try {
 			// Put in the header value of the application.property: application.isEnabledDapsInteraction
 			headersParts.put("Is-Enabled-Daps-Interaction", isEnabledDapsInteraction);
-			
-
 			headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
-			
 			String header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
-
-			MultipartMessage multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload).withHttpHeader(headerContentHeaders).build();
+			message = multipartMessageService.getMessage(header);
+			MultipartMessage multipartMessage = new MultipartMessageBuilder()
+					.withHttpHeader(headerContentHeaders)
+					.withHeaderContent(header)
+					.withHeaderContent(message)
+					.withPayloadContent(payload)
+					.build();
 			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));
-
+			
 			// Return exchange
-
 			exchange.getOut().setHeaders(headersParts);
 			exchange.getOut().setBody(multipartMessage);
 
@@ -72,7 +76,5 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 					RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, 
 					message);
 		}
-	
 	}
-
 }

@@ -118,6 +118,9 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		if (headers.get("IDS-CorrelationMessage") != null) {
 			headerAsMap.put("correlationMessage", headers.get("IDS-CorrelationMessage"));
 		}
+		if (headers.get("IDS-RequestedArtifact") != null) {
+			headerAsMap.put("requestedArtifact", headers.get("IDS-RequestedArtifact"));
+		}
 		return headerAsMap;
 	}
 
@@ -129,6 +132,7 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		headers.remove("IDS-IssuerConnector");
 		headers.remove("IDS-TransferContract");
 		headers.remove("IDS-CorrelationMessage");
+		headers.remove("IDS-RequestedArtifact");
 
 	}
 
@@ -160,6 +164,9 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		if(messageAsMap.get("correlationMessage") != null) {
 			headers.put("IDS-CorrelationMessage", messageAsMap.get("correlationMessage"));
 		}
+		if(messageAsMap.get("requestedArtifact") != null) {
+			headers.put("IDS-RequestedArtifact", messageAsMap.get("requestedArtifact"));
+		}
 
 		return headers;
 	}
@@ -190,6 +197,9 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		if (headersParts.get("IDS-CorrelationMessage") != null) {
 			headerContentHeaders.put("IDS-CorrelationMessage", headersParts.get("IDS-CorrelationMessage").toString());
 		}	
+		if (headersParts.get("IDS-RequestedArtifact") != null) {
+			headerContentHeaders.put("IDS-RequestedArtifact", headersParts.get("IDS-RequestedArtifact").toString());
+		}
 		
 		if (isEnabledDapsInteraction && headersParts.get("IDS-SecurityToken-TokenValue") != null) {
 			headerContentHeaders.put("IDS-SecurityToken-Type", headersParts.get("IDS-SecurityToken-Type").toString());
