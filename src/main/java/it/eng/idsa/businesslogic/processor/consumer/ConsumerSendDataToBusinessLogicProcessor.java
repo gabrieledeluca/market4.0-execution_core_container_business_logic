@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationB;
 import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
+import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.multipart.domain.MultipartMessage;
@@ -36,6 +37,9 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
 	
+	@Value("${application.openDataAppReceiverRouter}")
+	private String openDataAppReceiverRouter;
+	
 	@Value("${application.isEnabledDapsInteraction}")
 	private boolean isEnabledDapsInteraction;
 	
@@ -44,6 +48,9 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 
 	@Autowired(required = false)
 	private WebSocketServerConfigurationB webSocketServerConfiguration;
+	
+	@Autowired
+	private HttpHeaderService headerService;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
@@ -60,6 +67,10 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 			responseString = multipartMessage.getPayloadContent();
 			contentType = headersParts.get("Payload-Content-Type").toString();
 			headersParts.putAll(multipartMessage.getHttpHeaders());
+			if(!openDataAppReceiverRouter.equals("http-header")) {
+				// DataApp endpoint not http-header, must convert message to http headers
+				headersParts.putAll(headerService.prepareMessageForSendingAsHttpHeaders(multipartMessage));
+			}
 		} else {
 			if(isEnabledDapsInteraction) {
 				responseString = MultipartMessageProcessor

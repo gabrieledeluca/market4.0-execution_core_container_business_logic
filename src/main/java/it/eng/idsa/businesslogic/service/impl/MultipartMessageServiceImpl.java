@@ -1,6 +1,7 @@
 package it.eng.idsa.businesslogic.service.impl;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.fraunhofer.iais.eis.Message;
 import de.fraunhofer.iais.eis.Token;
@@ -134,30 +136,12 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			FormBodyPart bodyHeaderPart;
 			ContentBody headerBody = new StringBody(header, ContentType.APPLICATION_JSON);
 			bodyHeaderPart = FormBodyPartBuilder.create("header", headerBody).build();
-
-//			bodyHeaderPart = new FormBodyPart("header", new StringBody(header, ContentType.DEFAULT_TEXT)) {
-//				@Override
-//				protected void generateContentType(ContentBody body) {
-//				}
-//				@Override
-//				protected void generateTransferEncoding(ContentBody body){
-//				}
-//			};
 			bodyHeaderPart.addField("Content-Lenght", "" + header.length());
 
 			FormBodyPart bodyPayloadPart = null;
 			if (payload != null) {
 				ContentBody payloadBody = new StringBody(payload, ctPayload);
 				bodyPayloadPart = FormBodyPartBuilder.create("payload", payloadBody).build();
-
-//				bodyPayloadPart=new FormBodyPart("payload", new StringBody(payload, ContentType.DEFAULT_TEXT)) {
-//					@Override
-//					protected void generateContentType(ContentBody body) {
-//					}
-//					@Override
-//					protected void generateTransferEncoding(ContentBody body){
-//					}
-//				};
 				bodyPayloadPart.addField("Content-Lenght", "" + payload.length());
 			}
 
@@ -165,14 +149,6 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			if (frowardTo != null) {
 				ContentBody forwardToBody = new StringBody(frowardTo, ContentType.DEFAULT_TEXT);
 				headerForwardTo = FormBodyPartBuilder.create("forwardTo", forwardToBody).build();
-//				headerForwardTo=new FormBodyPart("forwardTo", new StringBody(frowardTo, ContentType.DEFAULT_TEXT)) {
-//					@Override
-//					protected void generateContentType(ContentBody body) {
-//					}
-//					@Override
-//					protected void generateTransferEncoding(ContentBody body){
-//					}
-//				};
 				headerForwardTo.addField("Content-Lenght", "" + frowardTo.length());
 			}
 
@@ -239,5 +215,12 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 				.withHeaderContent(messageWithoutToken).withPayloadHeader(messageWithToken.getPayloadHeader())
 				.withPayloadContent(messageWithToken.getPayloadContent()).withToken(messageWithToken.getToken())
 				.build();
+	}
+
+	@Override
+	public Message getMessageFromHeaderMap(Map<String, Object> headers) throws JsonProcessingException {
+		String json = null;
+		json = new ObjectMapper().writeValueAsString(headers);
+		return getMessage(json);
 	}
 }

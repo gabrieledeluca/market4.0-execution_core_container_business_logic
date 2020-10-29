@@ -174,11 +174,11 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		// -- Send message using HTTPS
 			switch (eccHttpSendRouter) {
 			case "mixed": {
-				response = sendDataToBusinessLogicService.sendMessageBinary(forwardTo, multipartMessage, headerParts);
+				response = sendDataToBusinessLogicService.sendMessageBinary(forwardTo, multipartMessage, headerParts, true);
 				break;
 			}
 			case "form": {
-				response =sendDataToBusinessLogicService.sendMessageFormData(forwardTo, multipartMessage, headerParts);
+				response = sendDataToBusinessLogicService.sendMessageFormData(forwardTo, multipartMessage, headerParts, true);
 				break;
 			}
 			case "http-header": {
@@ -193,121 +193,6 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		return response;
 	}
 
-//	private CloseableHttpResponse forwardMessageHttpHeader(String address, String payload,
-//			Map<String, Object> headerParts) throws IOException {
-//		logger.info("Forwarding Message: Body: http-header");
-//
-//		// Set F address
-//		HttpPost httpPost = new HttpPost(address);
-//
-//		// Add header message part to the http headers
-////		if (isEnabledDapsInteraction) {
-////			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithToken(header));
-////		}else {
-////			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeadersWithoutToken(header));
-////		}
-//
-//		addHeadersToHttpPost(headerParts, httpPost);
-//		
-//		if (payload != null) {
-//			StringEntity payloadEntity = new StringEntity(payload, 
-//					ContentType.create((String)headerParts.get("Content-Type")));
-//			httpPost.setEntity(payloadEntity);
-//		}
-//		CloseableHttpResponse response;
-//
-//		try {
-//			response = getHttpClient().execute(httpPost);
-//		} catch (IOException e) {
-//			logger.error("Error while calling Consumer", e);
-//			return null;
-//		} 
-//		return response;
-//	}
-
-//	private CloseableHttpResponse forwardMessageBinary(String address, String header, String payload,
-//			Map<String, Object> headerParts) throws UnsupportedEncodingException {
-//		logger.info("Forwarding Message: Body: binary");
-//
-//		// Covert to ContentBody
-//		ContentBody cbHeader = this.convertToContentBody(header, ContentType.DEFAULT_TEXT, "header");
-//		ContentBody cbPayload = null;
-//
-//		if (payload != null) {
-//			cbPayload = convertToContentBody(payload, ContentType.DEFAULT_TEXT, "payload");
-//		}
-//
-//		// Set F address
-//		HttpPost httpPost = new HttpPost(address);
-//		addHeadersToHttpPost(headerParts, httpPost);
-//
-//		HttpEntity reqEntity = payload == null ? MultipartEntityBuilder.create().addPart("header", cbHeader).build()
-//				: MultipartEntityBuilder.create().addPart("header", cbHeader).addPart("payload", cbPayload).build();
-//
-//		httpPost.setEntity(reqEntity);
-//
-//		CloseableHttpResponse response;
-//		try {
-//			response = getHttpClient().execute(httpPost);
-//		} catch (IOException e) {
-//			logger.error(e);
-//			return null;
-//		}
-//
-//		return response;
-//	}
-
-//	private void addHeadersToHttpPost(Map<String, Object> headesParts, HttpPost httpPost) {
-//		HeaderCleaner.removeTechnicalHeaders(headesParts);
-//
-//		headesParts.forEach((name, value) -> {
-//			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {
-//				if (value != null) {
-//					httpPost.setHeader(name, value.toString());
-//				} else {
-//					httpPost.setHeader(name, null);
-//				}
-//
-//			}
-//		});
-//	}
-
-//	private CloseableHttpResponse forwardMessageFormData(String address, String header, String payload,
-//			Map<String, Object> headesParts) throws ClientProtocolException, IOException {
-//		logger.info("Forwarding Message: Body: form-data");
-//
-//		// Set F address
-//		HttpPost httpPost = new HttpPost(address);
-//		addHeadersToHttpPost(headesParts, httpPost);
-//		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
-//		httpPost.setEntity(reqEntity);
-//
-//		CloseableHttpResponse response;
-//
-//		try {
-//			response = getHttpClient().execute(httpPost);
-//		} catch (IOException e) {
-//			logger.error(e);
-//			return null;
-//		}
-//		return response;
-//	}
-
-//	private ContentBody convertToContentBody(String value, ContentType contentType, String valueName)
-//			throws UnsupportedEncodingException {
-//		byte[] valueBiteArray = value.getBytes("utf-8");
-//		ContentBody cbValue = new ByteArrayBody(valueBiteArray, contentType, valueName);
-//		return cbValue;
-//	}
-
-//	private CloseableHttpClient getHttpClient() {
-//		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
-//
-//		CloseableHttpClient httpClient = HttpClientGenerator.get(config, isJettySSLEnabled);
-//		logger.warn("Created Accept-All Http Client");
-//
-//		return httpClient;
-//	}
 
 	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String forwardTo,
 			String multipartMessageBody) throws UnsupportedOperationException, IOException {
@@ -335,7 +220,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 				
 				//TODO make the MultipartMessage here or in the ProducerParseReceivedResponseMessage
 				exchange.getOut().setHeaders(returnHeadersAsMap(response.getAllHeaders()));
-				if (openDataAppReceiverRouter.equals("http-header")) {
+				if (eccHttpSendRouter.equals("http-header")) {
 					exchange.getOut().setBody(responseString);
 				}else {
 					exchange.getOut().setHeader("header", multipartMessageService.getHeaderContentString(responseString));

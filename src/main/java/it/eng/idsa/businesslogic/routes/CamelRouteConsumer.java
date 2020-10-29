@@ -14,6 +14,7 @@ import it.eng.idsa.businesslogic.processor.consumer.ConsumerFileRecreatorProcess
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerGetTokenFromDapsProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerHttpHeaderProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerMultiPartMessageProcessor;
+import it.eng.idsa.businesslogic.processor.consumer.ConsumerParseReceivedConnectorRequestProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerSendDataToBusinessLogicProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerSendDataToDataAppProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerSendTransactionToCHProcessor;
@@ -39,6 +40,9 @@ public class CamelRouteConsumer extends RouteBuilder {
 
 	@Autowired(required = false)
 	ConsumerFileRecreatorProcessor fileRecreatorProcessor;
+	
+	@Autowired
+	ConsumerParseReceivedConnectorRequestProcessor connectorRequestProcessor;
 
 	@Autowired
 	ConsumerValidateTokenProcessor validateTokenProcessor;
@@ -113,7 +117,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 		if(!isEnabledIdscp && !isEnabledWebSocket) {
 			from("jetty://https4://0.0.0.0:" + configuration.getCamelConsumerPort() + "/incoming-data-channel/receivedMessage")
 //					.process(httpHeaderProcessor)
-					.process(multiPartMessageProcessor)
+					.process(connectorRequestProcessor)
 					.choice()
 					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
 						.process(validateTokenProcessor)

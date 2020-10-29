@@ -7,7 +7,6 @@ import javax.activation.DataHandler;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.entity.ContentType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,16 +22,10 @@ import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.util.MultipartMessageKey;
 
-/**
- * 
- * @author Milan Karajovic and Gabriele De Luca
- *
- */
-
 @Component
-public class ConsumerMultiPartMessageProcessor implements Processor {
-
-	private static final Logger logger = LogManager.getLogger(ConsumerMultiPartMessageProcessor.class);
+public class ConsumerParseReceivedConnectorRequestProcessor implements Processor {
+	
+	private static final Logger logger = LogManager.getLogger(ConsumerParseReceivedConnectorRequestProcessor.class);
 
 	@Value("${application.isEnabledDapsInteraction}")
 	private boolean isEnabledDapsInteraction;
@@ -45,12 +38,6 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
-	
-	@Value("${application.openDataAppReceiverRouter}")
-	private String dataAppSendRouter;
-
-	@Value("${ecc.ecc.format}")
-	private String eccEccFormat;
 
 	@Autowired
 	private MultipartMessageService multipartMessageService;
@@ -60,10 +47,9 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
-
+	
 	@Override
 	public void process(Exchange exchange) throws Exception {
-
 		String header = null;
 		String payload = null;
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
@@ -75,7 +61,7 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		headersParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 		headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledDataAppWebSocket);
 		
-		if (dataAppSendRouter.equals("http-header")) { 
+		if (eccHttpSendRouter.equals("http-header")) { 
 			try {
 				// header content headers will be set in he http-headers of the MultipartMessage
 				headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
@@ -138,20 +124,14 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 
 				multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload)
 						.build();
-				if(headersParts.containsKey("Payload-Content-Type")) {
-					headersParts.put("Payload-Content-Type",
-							headersParts.get("payload.org.eclipse.jetty.servlet.contentType"));
-				} else {
-					// Payload content type not present, setting default plain/text
-					headersParts.put("Payload-Content-Type", ContentType.TEXT_PLAIN.toString());
-				}
+
+				headersParts.put("Payload-Content-Type",
+						headersParts.get("payload.org.eclipse.jetty.servlet.contentType"));
 			} catch (Exception e) {
 				logger.error("Error parsing multipart message:", e);
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
-
 		}
-
 		exchange.getOut().setHeaders(headersParts);
 		exchange.getOut().setBody(multipartMessage);
 	}

@@ -10,10 +10,12 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
+import it.eng.idsa.multipart.domain.MultipartMessage;
 
 @Service
 public class HttpHeaderServiceImpl implements HttpHeaderService {
@@ -87,14 +89,14 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 
 		Map<String, Object> headerAsMap = getHeaderMessagePartAsMap(headers);
 
-		removeMessageHeadersWithoutToken(headers);
+//		removeMessageHeadersWithoutToken(headers);
 
 		String header = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(headerAsMap);
 
 		return header;
 	}
 
-	private Map<String, Object> getHeaderMessagePartAsMap(Map<String, Object> headers) {
+	public Map<String, Object> getHeaderMessagePartAsMap(Map<String, Object> headers) {
 		Map<String, Object> headerAsMap = new HashMap<>();
 
 		if (headers.get("IDS-Messagetype") != null) {
@@ -138,7 +140,7 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 
 	@Override
 	public Map<String, Object> prepareMessageForSendingAsHttpHeadersWithoutToken(String header)
-			throws JsonParseException, JsonMappingException, IOException {
+			throws IOException {
 		Map<String, Object> messageAsMap = new ObjectMapper().readValue(header, Map.class);
 
 		Map<String, Object> headers = new HashMap<>();
@@ -209,6 +211,46 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		}
 		
 		return headerContentHeaders;
+	}
+
+	@Override
+	public Map<String, Object> prepareMessageForSendingAsHttpHeaders(MultipartMessage multipartMessage) {
+		ObjectMapper oMapper = new ObjectMapper();
+		Map<String, Object> messageAsMap = null;
+		try {
+			messageAsMap = oMapper.readValue(multipartMessage.getHeaderContentString(), 
+					new TypeReference<Map<String, Object>>(){});
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		Map<String, Object> headers = new HashMap<>();
+
+		if (messageAsMap.get("@type") != null) {
+			headers.put("IDS-Messagetype", (String) messageAsMap.get("@type"));
+		}
+		if (messageAsMap.get("@id") != null) {
+			headers.put("IDS-Id", messageAsMap.get("@id"));
+		}
+		if (messageAsMap.get("ids:issued") != null) {
+			headers.put("IDS-Issued", messageAsMap.get("ids:issued"));
+		}
+		if (messageAsMap.get("ids:modelVersion") != null) {
+			headers.put("IDS-ModelVersion", messageAsMap.get("ids:modelVersion"));
+		}
+		if(messageAsMap.get("ids:issuerConnector") != null) {
+			headers.put("IDS-IssuerConnector", messageAsMap.get("ids:issuerConnector"));
+		}
+		if(messageAsMap.get("ids:transferContract") != null) {
+			headers.put("IDS-TransferContract", messageAsMap.get("ids:transferContract"));
+		}
+		if(messageAsMap.get("ids:correlationMessage") != null) {
+			headers.put("IDS-CorrelationMessage", messageAsMap.get("ids:correlationMessage"));
+		}
+		if(messageAsMap.get("ids:requestedArtifact") != null) {
+			headers.put("IDS-RequestedArtifact", messageAsMap.get("ids:requestedArtifact"));
+		}
+		return headers;
 	}
 
 }

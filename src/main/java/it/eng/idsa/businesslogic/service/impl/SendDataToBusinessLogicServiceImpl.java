@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.service.SendDataToBusinessLogicService;
@@ -42,33 +43,36 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 	@Value("${application.isEnabledDapsInteraction}")
 	private boolean isEnabledDapsInteraction;
 	
+	@Value("${application.openDataAppReceiverRouter}")
+	private String openDataAppReceiverRouter;
+	
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
 
 	@Autowired
 	private MultipartMessageService multipartMessageService;
+	
+	@Autowired
+	private HttpHeaderService headerService;
 
 	@Override
 	public CloseableHttpResponse sendMessageBinary(String address, MultipartMessage multipartMessage,
-			Map<String, Object> headerParts) throws UnsupportedEncodingException, JsonProcessingException {
+			Map<String, Object> headerParts, boolean eccCommunication) throws UnsupportedEncodingException, JsonProcessingException {
 
-		String header = multipartMessage.getHeaderContentString();
+		String header = null;
 		String payload = multipartMessage.getPayloadContent();
 		Message messageForExcepiton = multipartMessage.getHeaderContent();
 
 		logger.info("Forwarding Message: Body: binary");
 		
-		String message ;
-		if(isEnabledDapsInteraction) {
-			message = multipartMessageService.addToken(multipartMessage.getHeaderContent(), multipartMessage.getToken());
+		if(!eccCommunication) {
+			// sending to DataApp, remove token from message
+			header = multipartMessageService.removeToken(multipartMessage.getHeaderContent());
 		} else {
-			message = multipartMessage.getHeaderContentString();
+			header = multipartMessage.getHeaderContentString();
 		}
-
 		ContentType ctPayload;
-
 		String contentTypeRemoval = "Content-Type: ";
-
 		if (headerParts.get("Payload-Content-Type") != null) {
 			ctPayload = ContentType
 					.parse(headerParts.get("Payload-Content-Type").toString().replaceFirst(contentTypeRemoval, ""));
@@ -108,33 +112,15 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 		return response;
 	}
 
-//	@Override
-//	public CloseableHttpResponse sendMessageFormData(String address, String header, String payload,
-//			Map<String, Object> headesParts) {
-//		logger.info("Forwarding Message: Body: form-data");
-//
-//		// Set F address
-//		HttpPost httpPost = new HttpPost(address);
-//		addHeadersToHttpPost(headesParts, httpPost);
-//		HttpEntity reqEntity = multipartMessageService.createMultipartMessage(header, payload, null);
-//		httpPost.setEntity(reqEntity);
-//
-//		CloseableHttpResponse response;
-//
-//		try {
-//			response = getHttpClient().execute(httpPost);
-//		} catch (IOException e) {
-//			logger.error(e);
-//			return null;
-//		}
-//		return response;
-//	}
-
 	@Override
 	public CloseableHttpResponse sendMessageHttpHeader(String address, MultipartMessage multipartMessage,
 			Map<String, Object> headerParts) {
 		logger.info("Forwarding Message: http-header");
 
+		if(!openDataAppReceiverRouter.equals("http-header")) {
+			// DataApp endpoint not http-header, must convert message to http headers
+			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeaders(multipartMessage));
+		}
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);
 
@@ -202,26 +188,23 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 
 	@Override
 	public CloseableHttpResponse sendMessageFormData(String address, MultipartMessage multipartMessage,
-			Map<String, Object> headerParts) throws UnsupportedEncodingException {
+			Map<String, Object> headerParts, boolean eccCommunication) throws UnsupportedEncodingException {
 		
 		logger.info("Forwarding Message: Body: form-data");
 		
-		String header = multipartMessage.getHeaderContentString();
+		String header = null;
 		String payload = multipartMessage.getPayloadContent();
 		Message messageForException = multipartMessage.getHeaderContent();
 		
-		String message ;
-		if(isEnabledDapsInteraction) {
-			message = multipartMessageService.addToken(multipartMessage.getHeaderContent(), multipartMessage.getToken());
+		if(!eccCommunication) {
+			// sending to DataApp, remove token from message
+			header = multipartMessageService.removeToken(multipartMessage.getHeaderContent());
 		} else {
-			message = multipartMessage.getHeaderContentString();
+			header = multipartMessage.getHeaderContentString();
 		}
 		
-		
 		HttpPost httpPost = new HttpPost(address);
-		
 		ContentType ctPayload;
-
 		if (headerParts.get("payload.org.eclipse.jetty.servlet.contentType") != null) {
 			ctPayload = ContentType
 					.parse(headerParts.get("payload.org.eclipse.jetty.servlet.contentType").toString());

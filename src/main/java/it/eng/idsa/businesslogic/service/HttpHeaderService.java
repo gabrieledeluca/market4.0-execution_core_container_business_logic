@@ -7,6 +7,8 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
+import it.eng.idsa.multipart.domain.MultipartMessage;
+
 public interface HttpHeaderService {
 	
 	String getHeaderMessagePartFromHttpHeadersWithoutToken(Map<String, Object> headers) throws JsonProcessingException;
@@ -17,7 +19,11 @@ public interface HttpHeaderService {
 
 	Map<String, Object> prepareMessageForSendingAsHttpHeadersWithoutToken(String header) throws JsonParseException, JsonMappingException, IOException;
 	
+	Map<String, Object> prepareMessageForSendingAsHttpHeaders(MultipartMessage multipartMessage);
+	
 	void removeTokenHeaders(Map<String, Object> headers);
+	
+	Map<String, Object> getHeaderMessagePartAsMap(Map<String, Object> headers);
 
 	Map<String, String> getHeaderContentHeaders(Map<String, Object> headersParts);
 }

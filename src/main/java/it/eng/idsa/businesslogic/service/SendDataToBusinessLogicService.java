@@ -11,16 +11,14 @@ import it.eng.idsa.multipart.domain.MultipartMessage;
 
 public interface SendDataToBusinessLogicService {
 
-	CloseableHttpResponse sendMessageBinary(String address, MultipartMessage message, Map<String, Object> httpHeaders)
+	CloseableHttpResponse sendMessageBinary(String address, MultipartMessage message, Map<String, Object> httpHeaders,
+			boolean eccCommunication)
 			throws UnsupportedEncodingException, JsonProcessingException;
-
-//	CloseableHttpResponse sendMessageFormData(String address, String header, String payload,
-//			Map<String, Object> headesParts);
 
 	CloseableHttpResponse sendMessageHttpHeader(String address, MultipartMessage multipartMessage,
 			Map<String, Object> headerParts);
 	
 	CloseableHttpResponse sendMessageFormData(String address, MultipartMessage message,
-			Map<String, Object> headerParts) throws UnsupportedEncodingException;
+			Map<String, Object> headerParts, boolean eccCommunication) throws UnsupportedEncodingException;
 
 }
