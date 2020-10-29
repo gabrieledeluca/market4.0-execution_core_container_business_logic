@@ -64,6 +64,8 @@ public class ProducerUsageControlProcessor implements Processor {
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
 
+	@Value("${application.openDataAppReceiverRouter}")
+	private String openDataAppReceiverRouter;
 
     public ProducerUsageControlProcessor() {
         gson = ConsumerUsageControlProcessor.createGson();
@@ -134,12 +136,14 @@ public class ProducerUsageControlProcessor implements Processor {
                 ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration.responseMessageBufferWebSocket();
                 responseMessageServerBean.add(responseMultipartMessageString.getBytes());
             }
-            exchange.getOut().setHeaders(exchange.getIn().getHeaders());
-            if(eccHttpSendRouter.equals("http-header")) {
+            if(openDataAppReceiverRouter.equals("http-header")) {
             	exchange.getOut().setBody(extractPayloadFromJson(ucObj.getPayload()));
             } else {
+            	httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
+            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
             	exchange.getOut().setBody(responseMultipartMessageString);
             }
+            exchange.getOut().setHeaders(exchange.getIn().getHeaders());
         } catch (Exception e) {
             logger.error("Usage Control Enforcement has failed with MESSAGE: ", e.getMessage());
             rejectionMessageService.sendRejectionMessage(

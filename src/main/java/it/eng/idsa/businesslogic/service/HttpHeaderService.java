@@ -23,6 +23,8 @@ public interface HttpHeaderService {
 	
 	void removeTokenHeaders(Map<String, Object> headers);
 	
+	void removeMessageHeadersWithoutToken(Map<String, Object> headers);
+	
 	Map<String, Object> getHeaderMessagePartAsMap(Map<String, Object> headers);
 
 	Map<String, String> getHeaderContentHeaders(Map<String, Object> headersParts);

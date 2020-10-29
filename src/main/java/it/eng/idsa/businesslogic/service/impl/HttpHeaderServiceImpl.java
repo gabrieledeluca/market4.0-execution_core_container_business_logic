@@ -126,7 +126,7 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		return headerAsMap;
 	}
 
-	private void removeMessageHeadersWithoutToken(Map<String, Object> headers) {
+	public void removeMessageHeadersWithoutToken(Map<String, Object> headers) {
 		headers.remove("IDS-Messagetype");
 		headers.remove("IDS-Id");
 		headers.remove("IDS-Issued");
