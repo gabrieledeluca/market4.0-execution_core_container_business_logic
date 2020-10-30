@@ -1,5 +1,6 @@
 package it.eng.idsa.businesslogic.service;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ public interface SendDataToBusinessLogicService {
 			throws UnsupportedEncodingException, JsonProcessingException;
 
 	CloseableHttpResponse sendMessageHttpHeader(String address, MultipartMessage multipartMessage,
-			Map<String, Object> headerParts);
+			Map<String, Object> headerParts) throws IOException;
 	
 	CloseableHttpResponse sendMessageFormData(String address, MultipartMessage message,
 			Map<String, Object> headerParts, boolean eccCommunication) throws UnsupportedEncodingException;

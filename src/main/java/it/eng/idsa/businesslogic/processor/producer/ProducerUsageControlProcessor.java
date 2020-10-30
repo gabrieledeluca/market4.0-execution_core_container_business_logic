@@ -1,10 +1,25 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import org.apache.camel.Exchange;
+import org.apache.camel.Processor;
+import org.apache.camel.converter.stream.CachedOutputStream;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Component;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.internal.LinkedTreeMap;
+
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.IdsMsgTarget;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.IdsUseObject;
 import de.fraunhofer.dataspaces.iese.camel.interceptor.model.UsageControlObject;
@@ -20,16 +35,6 @@ import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 import it.eng.idsa.multipart.processor.MultipartMessageProcessor;
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
-import org.apache.camel.converter.stream.CachedOutputStream;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.stereotype.Component;
 
 /**
  * @author Antonio Scatoloni and Gabriele De Luca
@@ -84,10 +89,14 @@ public class ProducerUsageControlProcessor implements Processor {
         String payload = null;
         try {
             String multipartMessageBody = exchange.getIn().getBody().toString();
-            if (eccHttpSendRouter.equals("http-header")) {
+            if (openDataAppReceiverRouter.equals("http-header")) {
             	header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(exchange.getIn().getHeaders());
             	payload = exchange.getIn().getBody(String.class);
             } else {
+//            	Map<String, Object> headers = exchange.getIn().getHeaders();
+//            	header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(exchange.getIn().getHeaders());
+//            	message = multipartMessageService.getMessageFromHeaderMap(
+//            			httpHeaderService.getHeaderMessagePartAsMap(headers));
             	header = multipartMessageService.getHeaderContentString(multipartMessageBody);
             	payload = multipartMessageService.getPayloadContent(multipartMessageBody);
             }
@@ -130,6 +139,9 @@ public class ProducerUsageControlProcessor implements Processor {
                             .build();
                     responseMultipartMessageString = MultipartMessageProcessor.
                             multipartMessagetoString(multipartMessage, false);
+                    Optional<String> boundary = getMessageBoundaryFromMessage(responseMultipartMessageString);
+        			String contentType = "multipart/mixed; boundary=" + boundary.orElse("---aaa") + ";charset=UTF-8";
+        			exchange.getIn().getHeaders().put("Content-Type", contentType);
                 }
             }
             if(isEnabledWebSocket) {
@@ -187,5 +199,14 @@ public class ProducerUsageControlProcessor implements Processor {
         JsonElement payloadInner = asJsonObject.get("payload");
         if (null != payloadInner) return payloadInner.getAsString();
         return payload.toString();
+    }
+    
+    private Optional<String> getMessageBoundaryFromMessage(String message) {
+        String boundary = null;
+        Stream<String> lines = message.lines();
+        boundary = lines.filter(line -> line.startsWith("--"))
+                .findFirst()
+                .get();
+        return Optional.ofNullable(boundary);
     }
 }

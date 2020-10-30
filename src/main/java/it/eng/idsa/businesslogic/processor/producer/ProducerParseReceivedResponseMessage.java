@@ -1,5 +1,6 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
+import java.nio.charset.Charset;
 import java.util.Map;
 
 import javax.activation.DataHandler;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
-import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
@@ -34,9 +34,6 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 	private static final Logger logger = LogManager.getLogger(ProducerParseReceivedResponseMessage.class);
 
 	@Autowired
-	private MultipartMessageService multipartMessageService;
-
-	@Autowired
 	private RejectionMessageService rejectionMessageService;
 
 	@Autowired
@@ -53,19 +50,11 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		Message message = null;
 		MultipartMessage multipartMessage = null;
-		Map<String, String> headerContentHeaders = null;
+		Map<String, Object> headerContentHeaders = null;
 
 		if (eccHttpSendRouter.equals("http-header")) {
-
-			try {
-
-				// header content headers will be set in he http-headers of the MultipartMessage
-				headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
-
-			} catch (Exception e) {
-				logger.error("Mandatory headers of the multipart message header part are missing or null:", e);
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
+			// header content headers will be set in he http-headers of the MultipartMessage
+			headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
 
 			if (exchange.getIn().getBody() != null) {
 				payload = exchange.getIn().getBody(String.class);
@@ -73,14 +62,19 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 				logger.error("Payload is null");
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
-
-			multipartMessage = new MultipartMessageBuilder().withHttpHeader(headerContentHeaders)
-					.withPayloadContent(payload).build();
-
+			header = headerService.getHeaderMessagePartFromHttpHeadersWithToken(headerContentHeaders);
 			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));
+			String token = null;
+			if(headersParts.get("IDS-SecurityToken-TokenValue") != null) {
+				token = (String)headersParts.get("IDS-SecurityToken-TokenValue");
+			}
+			multipartMessage = new MultipartMessageBuilder()
+					.withHeaderContent(header)
+					.withPayloadContent(payload)
+					.withToken(token)
+					.build();
 
 		} else {
-
 			if (!headersParts.containsKey("header")) {
 				logger.error("Multipart message header is missing");
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
@@ -111,23 +105,19 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 					header = headersParts.get("header").toString();
 				} else {
 					DataHandler dtHeader = (DataHandler) headersParts.get("header");
-					header = IOUtils.toString(dtHeader.getInputStream());
+					header = IOUtils.toString(dtHeader.getInputStream(), Charset.forName("UTF-8"));
 				}
-
 				payload = headersParts.get("payload").toString();
-
-				multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload)
+				multipartMessage = new MultipartMessageBuilder()
+						.withHeaderContent(header)
+						.withPayloadContent(payload)
 						.build();
-
-				headersParts.put("Payload-Content-Type",
-						headersParts.get("payload.org.eclipse.jetty.servlet.contentType"));
 			} catch (Exception e) {
 				logger.error("Error parsing multipart message:", e);
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
-
 		}
-
+		
 		exchange.getOut().setHeaders(headersParts);
 		exchange.getOut().setBody(multipartMessage);
 

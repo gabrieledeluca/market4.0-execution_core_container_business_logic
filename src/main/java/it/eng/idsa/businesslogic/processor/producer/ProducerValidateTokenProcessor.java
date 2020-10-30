@@ -1,6 +1,5 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.DapsService;
-import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
@@ -42,9 +40,6 @@ public class ProducerValidateTokenProcessor implements Processor {
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
 	
-	@Autowired
-	private HttpHeaderService httpHeaderService;
-
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		
@@ -53,12 +48,12 @@ public class ProducerValidateTokenProcessor implements Processor {
 		
 		String token = null;
 		Message message = null;
+		// TODO multipartMessage.getToken() in both cases - ProducerParseReceivedResponseMessage
 		if (eccHttpSendRouter.equals("http-header")) {
-			token = multipartMessage.getHttpHeaders().get("IDS-SecurityToken-TokenValue");
+			token = multipartMessage.getToken();
 		}else {
 			message = multipartMessage.getHeaderContent();
 			token = multipartMessageService.getToken(message);
-			
 		}
 		logger.info("token: ", token);
 		

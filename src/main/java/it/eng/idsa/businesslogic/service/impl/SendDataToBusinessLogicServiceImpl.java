@@ -114,7 +114,7 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 
 	@Override
 	public CloseableHttpResponse sendMessageHttpHeader(String address, MultipartMessage multipartMessage,
-			Map<String, Object> headerParts) {
+			Map<String, Object> headerParts) throws IOException {
 		logger.info("Forwarding Message: http-header");
 
 		if(!openDataAppReceiverRouter.equals("http-header")) {

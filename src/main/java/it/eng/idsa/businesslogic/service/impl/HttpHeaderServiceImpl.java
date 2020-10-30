@@ -3,6 +3,7 @@ package it.eng.idsa.businesslogic.service.impl;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.json.simple.JsonObject;
 import org.springframework.beans.factory.annotation.Value;
@@ -96,6 +97,7 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		return header;
 	}
 
+	@Override
 	public Map<String, Object> getHeaderMessagePartAsMap(Map<String, Object> headers) {
 		Map<String, Object> headerAsMap = new HashMap<>();
 
@@ -139,10 +141,11 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 	}
 
 	@Override
-	public Map<String, Object> prepareMessageForSendingAsHttpHeadersWithoutToken(String header)
-			throws IOException {
-		Map<String, Object> messageAsMap = new ObjectMapper().readValue(header, Map.class);
-
+	public Map<String, Object> prepareMessageForSendingAsHttpHeadersWithoutToken(String header) throws IOException {
+		ObjectMapper oMapper = new ObjectMapper();
+		Map<String, Object> messageAsMap = null;
+		messageAsMap = oMapper.readValue(header, new TypeReference<Map<String, Object>>() { });
+		
 		Map<String, Object> headers = new HashMap<>();
 
 		if (messageAsMap.get("@type") != null) {
@@ -157,16 +160,16 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		if (messageAsMap.get("modelVersion") != null) {
 			headers.put("IDS-ModelVersion", messageAsMap.get("modelVersion"));
 		}
-		if(messageAsMap.get("issuerConnector") != null) {
+		if (messageAsMap.get("issuerConnector") != null) {
 			headers.put("IDS-IssuerConnector", messageAsMap.get("issuerConnector"));
 		}
-		if(messageAsMap.get("transferContract") != null) {
+		if (messageAsMap.get("transferContract") != null) {
 			headers.put("IDS-TransferContract", messageAsMap.get("transferContract"));
 		}
-		if(messageAsMap.get("correlationMessage") != null) {
+		if (messageAsMap.get("correlationMessage") != null) {
 			headers.put("IDS-CorrelationMessage", messageAsMap.get("correlationMessage"));
 		}
-		if(messageAsMap.get("requestedArtifact") != null) {
+		if (messageAsMap.get("requestedArtifact") != null) {
 			headers.put("IDS-RequestedArtifact", messageAsMap.get("requestedArtifact"));
 		}
 
@@ -174,55 +177,52 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 	}
 
 	@Override
-	public Map<String, String> getHeaderContentHeaders(Map<String, Object> headersParts) {
-		
-		Map<String, String> headerContentHeaders = new HashMap<>();
-		
+	public Map<String, Object> getHeaderContentHeaders(Map<String, Object> headersParts) {
+
+		Map<String, Object> headerContentHeaders = new HashMap<>();
+
 		if (headersParts.get("IDS-Messagetype") != null) {
-			headerContentHeaders.put("IDS-Messagetype", headersParts.get("IDS-Messagetype").toString());
+			headerContentHeaders.put("IDS-Messagetype", headersParts.get("IDS-Messagetype"));
 		}
 		if (headersParts.get("IDS-Messagetype") != null) {
-			headerContentHeaders.put("IDS-Id", headersParts.get("IDS-Id").toString());
+			headerContentHeaders.put("IDS-Id", headersParts.get("IDS-Id"));
 		}
 		if (headersParts.get("IDS-Issued") != null) {
-			headerContentHeaders.put("IDS-Issued", headersParts.get("IDS-Issued").toString());
+			headerContentHeaders.put("IDS-Issued", headersParts.get("IDS-Issued"));
 		}
 		if (headersParts.get("IDS-ModelVersion") != null) {
-			headerContentHeaders.put("IDS-ModelVersion", headersParts.get("IDS-ModelVersion").toString());
+			headerContentHeaders.put("IDS-ModelVersion", headersParts.get("IDS-ModelVersion"));
 		}
 		if (headersParts.get("IDS-IssuerConnector") != null) {
-			headerContentHeaders.put("IDS-IssuerConnector", headersParts.get("IDS-IssuerConnector").toString());
+			headerContentHeaders.put("IDS-IssuerConnector", headersParts.get("IDS-IssuerConnector"));
 		}
 		if (headersParts.get("IDS-TransferContract") != null) {
-			headerContentHeaders.put("IDS-TransferContract", headersParts.get("IDS-TransferContract").toString());
+			headerContentHeaders.put("IDS-TransferContract", headersParts.get("IDS-TransferContract"));
 		}
 		if (headersParts.get("IDS-CorrelationMessage") != null) {
-			headerContentHeaders.put("IDS-CorrelationMessage", headersParts.get("IDS-CorrelationMessage").toString());
-		}	
+			headerContentHeaders.put("IDS-CorrelationMessage", headersParts.get("IDS-CorrelationMessage"));
+		}
 		if (headersParts.get("IDS-RequestedArtifact") != null) {
-			headerContentHeaders.put("IDS-RequestedArtifact", headersParts.get("IDS-RequestedArtifact").toString());
+			headerContentHeaders.put("IDS-RequestedArtifact", headersParts.get("IDS-RequestedArtifact"));
 		}
-		
+
 		if (isEnabledDapsInteraction && headersParts.get("IDS-SecurityToken-TokenValue") != null) {
-			headerContentHeaders.put("IDS-SecurityToken-Type", headersParts.get("IDS-SecurityToken-Type").toString());
-			headerContentHeaders.put("IDS-SecurityToken-Id", headersParts.get("IDS-SecurityToken-Id").toString());
-			headerContentHeaders.put("IDS-SecurityToken-TokenFormat", headersParts.get("IDS-SecurityToken-TokenFormat").toString());
-			headerContentHeaders.put("IDS-SecurityToken-TokenValue", headersParts.get("IDS-SecurityToken-TokenValue").toString());
+			headerContentHeaders.put("IDS-SecurityToken-Type", headersParts.get("IDS-SecurityToken-Type"));
+			headerContentHeaders.put("IDS-SecurityToken-Id", headersParts.get("IDS-SecurityToken-Id"));
+			headerContentHeaders.put("IDS-SecurityToken-TokenFormat",
+					headersParts.get("IDS-SecurityToken-TokenFormat"));
+			headerContentHeaders.put("IDS-SecurityToken-TokenValue", headersParts.get("IDS-SecurityToken-TokenValue"));
 		}
-		
+
 		return headerContentHeaders;
 	}
 
 	@Override
-	public Map<String, Object> prepareMessageForSendingAsHttpHeaders(MultipartMessage multipartMessage) {
+	public Map<String, Object> prepareMessageForSendingAsHttpHeaders(MultipartMessage multipartMessage) throws IOException {
 		ObjectMapper oMapper = new ObjectMapper();
 		Map<String, Object> messageAsMap = null;
-		try {
-			messageAsMap = oMapper.readValue(multipartMessage.getHeaderContentString(), 
-					new TypeReference<Map<String, Object>>(){});
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+			messageAsMap = oMapper.readValue(multipartMessage.getHeaderContentString(),
+					new TypeReference<Map<String, Object>>() { });
 
 		Map<String, Object> headers = new HashMap<>();
 
@@ -238,19 +238,25 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		if (messageAsMap.get("ids:modelVersion") != null) {
 			headers.put("IDS-ModelVersion", messageAsMap.get("ids:modelVersion"));
 		}
-		if(messageAsMap.get("ids:issuerConnector") != null) {
+		if (messageAsMap.get("ids:issuerConnector") != null) {
 			headers.put("IDS-IssuerConnector", messageAsMap.get("ids:issuerConnector"));
 		}
-		if(messageAsMap.get("ids:transferContract") != null) {
+		if (messageAsMap.get("ids:transferContract") != null) {
 			headers.put("IDS-TransferContract", messageAsMap.get("ids:transferContract"));
 		}
-		if(messageAsMap.get("ids:correlationMessage") != null) {
+		if (messageAsMap.get("ids:correlationMessage") != null) {
 			headers.put("IDS-CorrelationMessage", messageAsMap.get("ids:correlationMessage"));
 		}
-		if(messageAsMap.get("ids:requestedArtifact") != null) {
+		if (messageAsMap.get("ids:requestedArtifact") != null) {
 			headers.put("IDS-RequestedArtifact", messageAsMap.get("ids:requestedArtifact"));
 		}
 		return headers;
+	}
+
+	@Override
+	public Map<String, String> convertMapToStringString(Map<String, Object> map) {
+		return map.entrySet().stream().filter(entry -> entry.getValue() instanceof String)
+				.collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
 	}
 
 }

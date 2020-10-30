@@ -42,7 +42,7 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 		Message message = null;
 		Map<String, Object> headersParts = null;
 		String payload = null;
-		Map<String, String> headerContentHeaders = null;
+		Map<String, Object> headerContentHeaders = null;
 
 		// Get from the input "exchange"
 		headersParts = exchange.getIn().getHeaders();
@@ -59,7 +59,7 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 			String header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
 			message = multipartMessageService.getMessage(header);
 			MultipartMessage multipartMessage = new MultipartMessageBuilder()
-					.withHttpHeader(headerContentHeaders)
+					.withHttpHeader(headerService.convertMapToStringString(headerContentHeaders))
 					.withHeaderContent(header)
 					.withHeaderContent(message)
 					.withPayloadContent(payload)

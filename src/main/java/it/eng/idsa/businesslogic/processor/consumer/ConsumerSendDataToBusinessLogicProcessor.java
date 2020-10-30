@@ -97,7 +97,7 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 			headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledWebSocket);
 		}
 		HeaderCleaner.removeTechnicalHeaders(headersParts);
-		headersParts.put("Content-Type", contentType);
+		headersParts.put("Payload-Content-Type", contentType);
 		exchange.getOut().setBody(responseString);
 		exchange.getOut().setHeaders(headersParts);
 

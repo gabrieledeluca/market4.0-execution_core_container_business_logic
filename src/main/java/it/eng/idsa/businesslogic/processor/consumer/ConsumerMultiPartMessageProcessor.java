@@ -1,5 +1,6 @@
 package it.eng.idsa.businesslogic.processor.consumer;
 
+import java.nio.charset.Charset;
 import java.util.Map;
 
 import javax.activation.DataHandler;
@@ -69,7 +70,7 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		Message message = null;
 		MultipartMessage multipartMessage = null;
-		Map<String, String> headerContentHeaders = null;
+		Map<String, Object> headerContentHeaders = null;
 
 		headersParts.put("Is-Enabled-Daps-Interaction", isEnabledDapsInteraction);
 		headersParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
@@ -94,7 +95,7 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
 			message = multipartMessageService.getMessage(header);
 			multipartMessage = new MultipartMessageBuilder()
-					.withHttpHeader(headerContentHeaders)
+					.withHttpHeader(headerService.convertMapToStringString(headerContentHeaders))
 					.withHeaderContent(message)
 					.withHeaderContent(header)
 					.withPayloadContent(payload).build();
@@ -132,7 +133,7 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 					header = headersParts.get("header").toString();
 				}else {
 					DataHandler dtHeader = (DataHandler) headersParts.get("header");
-					header = IOUtils.toString(dtHeader.getInputStream());
+					header = IOUtils.toString(dtHeader.getInputStream(), Charset.forName("UTF-8"));
 				}
 				payload = headersParts.get("payload").toString();
 
