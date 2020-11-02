@@ -7,6 +7,8 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.converter.stream.CachedOutputStream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,7 @@ import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMes
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
 import it.eng.idsa.multipart.domain.MultipartMessage;
@@ -88,18 +91,20 @@ public class ProducerUsageControlProcessor implements Processor {
         String header = null;
         String payload = null;
         try {
-            String multipartMessageBody = exchange.getIn().getBody().toString();
-            if (openDataAppReceiverRouter.equals("http-header")) {
-            	header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(exchange.getIn().getHeaders());
-            	payload = exchange.getIn().getBody(String.class);
-            } else {
+//            String multipartMessageBody = exchange.getIn().getBody().toString();
+            MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
+//            if (openDataAppReceiverRouter.equals("http-header")) {
+//            	header = multipartMessage.getHeaderContentString();
+            	header = multipartMessageService.removeToken(multipartMessage.getHeaderContent());
+            	payload = multipartMessage.getPayloadContent();
+//            } else {
 //            	Map<String, Object> headers = exchange.getIn().getHeaders();
 //            	header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(exchange.getIn().getHeaders());
 //            	message = multipartMessageService.getMessageFromHeaderMap(
 //            			httpHeaderService.getHeaderMessagePartAsMap(headers));
-            	header = multipartMessageService.getHeaderContentString(multipartMessageBody);
-            	payload = multipartMessageService.getPayloadContent(multipartMessageBody);
-            }
+//            	header = multipartMessageService.getHeaderContentString(multipartMessageBody);
+//            	payload = multipartMessageService.getPayloadContent(multipartMessageBody);
+//            }
             message = multipartMessageService.getMessage(header);
             logger.info("from: " + exchange.getFromEndpoint());
             logger.info("Message Body: " + payload);
@@ -133,15 +138,12 @@ public class ProducerUsageControlProcessor implements Processor {
                         throw new Exception("Usage Control Enforcement with EMPTY RESULT encountered.");
                     }
                     // Prepare Response
-                    MultipartMessage multipartMessage = new MultipartMessageBuilder()
+                    MultipartMessage multipartMessageResponse = new MultipartMessageBuilder()
                             .withHeaderContent(header)
                             .withPayloadContent(extractPayloadFromJson(ucObj.getPayload()))
                             .build();
                     responseMultipartMessageString = MultipartMessageProcessor.
-                            multipartMessagetoString(multipartMessage, false);
-                    Optional<String> boundary = getMessageBoundaryFromMessage(responseMultipartMessageString);
-        			String contentType = "multipart/mixed; boundary=" + boundary.orElse("---aaa") + ";charset=UTF-8";
-        			exchange.getIn().getHeaders().put("Content-Type", contentType);
+                            multipartMessagetoString(multipartMessageResponse, false);
                 }
             }
             if(isEnabledWebSocket) {
@@ -151,10 +153,21 @@ public class ProducerUsageControlProcessor implements Processor {
             if(openDataAppReceiverRouter.equals("http-header")) {
             	exchange.getOut().setBody(extractPayloadFromJson(ucObj.getPayload()));
             } else {
-            	httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
-            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
-            	exchange.getOut().setBody(responseMultipartMessageString);
+            	if(openDataAppReceiverRouter.equals("form")) {
+            		HttpEntity resultEntity = multipartMessageService.createMultipartMessage(header, extractPayloadFromJson(ucObj.getPayload()),
+            				null, ContentType.APPLICATION_JSON);
+            		exchange.getIn().getHeaders().put(Exchange.CONTENT_TYPE, resultEntity.getContentType().getValue());
+            		exchange.getOut().setBody(resultEntity.getContent());
+            	} else {
+            		Optional<String> boundary = getMessageBoundaryFromMessage(responseMultipartMessageString);
+         			String contentType = "multipart/mixed; boundary=" + boundary.orElse("---aaa") + ";charset=UTF-8";
+         			exchange.getIn().getHeaders().put("Content-Type", contentType);
+	            	httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
+	            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
+	            	exchange.getOut().setBody(responseMultipartMessageString);
+            	}
             }
+            HeaderCleaner.removeTechnicalHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
         } catch (Exception e) {
             logger.error("Usage Control Enforcement has failed with MESSAGE: ", e.getMessage());
