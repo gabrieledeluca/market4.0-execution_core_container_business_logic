@@ -92,7 +92,7 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 			}
 			case "http-header": {
 				response = sendDataToBusinessLogicService.sendMessageHttpHeader(configuration.getOpenDataAppReceiver(),
-						multipartMessage, headerParts);
+						multipartMessage, headerParts, false);
 				break;
 			}
 			default: {

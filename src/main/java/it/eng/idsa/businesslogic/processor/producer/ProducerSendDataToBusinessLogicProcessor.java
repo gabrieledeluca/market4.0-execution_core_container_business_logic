@@ -182,7 +182,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 				break;
 			}
 			case "http-header": {
-				response = sendDataToBusinessLogicService.sendMessageHttpHeader(forwardTo, multipartMessage, headerParts);
+				response = sendDataToBusinessLogicService.sendMessageHttpHeader(forwardTo, multipartMessage, headerParts, true);
 				break;
 			}
 			default:

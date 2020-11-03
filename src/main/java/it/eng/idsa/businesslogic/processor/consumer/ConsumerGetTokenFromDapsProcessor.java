@@ -62,8 +62,7 @@ public class ConsumerGetTokenFromDapsProcessor implements Processor {
 		if (eccHttpSendRouter.equals("http-header")) {
 			logger.info("message id=" + multipartMessage.getHttpHeaders().get("IDS-Id"));
 		} else {
-			// message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
-			message = multipartMessageService.getMessage(multipartMessage.getHeaderContentString());
+			message = multipartMessage.getHeaderContent();
 			logger.info("message id=" + message.getId());
 
 		}
@@ -91,7 +90,12 @@ public class ConsumerGetTokenFromDapsProcessor implements Processor {
 
 		logger.info("token=" + token);
 		if (eccHttpSendRouter.equals("http-header")) {
-			transformJWTTokenToHeaders(token, multipartMessage.getHttpHeaders());
+			multipartMessage = new MultipartMessageBuilder()
+					.withHttpHeader(multipartMessage.getHttpHeaders())
+					.withHeaderHeader(multipartMessage.getHeaderHeader())
+					.withPayloadHeader(multipartMessage.getPayloadHeader())
+					.withPayloadContent(multipartMessage.getPayloadContent())
+					.withToken(token).build();
 		} else {
 			String messageStringWithToken = multipartMessageService.addToken(message, token);
 			logger.info("messageStringWithToken=" + messageStringWithToken);

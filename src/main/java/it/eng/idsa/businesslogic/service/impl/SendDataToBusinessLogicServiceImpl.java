@@ -114,12 +114,16 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 
 	@Override
 	public CloseableHttpResponse sendMessageHttpHeader(String address, MultipartMessage multipartMessage,
-			Map<String, Object> headerParts) throws IOException {
+			Map<String, Object> headerParts, boolean eccCommunication) throws IOException {
 		logger.info("Forwarding Message: http-header");
 
 		if(!openDataAppReceiverRouter.equals("http-header")) {
 			// DataApp endpoint not http-header, must convert message to http headers
 			headerParts.putAll(headerService.prepareMessageForSendingAsHttpHeaders(multipartMessage));
+		}
+		
+		if (eccCommunication && isEnabledDapsInteraction) {
+			headerParts.put("IDS-SecurityToken-TokenValue", multipartMessage.getToken());
 		}
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);

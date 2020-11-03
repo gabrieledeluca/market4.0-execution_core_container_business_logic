@@ -56,35 +56,30 @@ public class ConsumerParseReceivedConnectorRequestProcessor implements Processor
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		Message message = null;
 		MultipartMessage multipartMessage = null;
-		Map<String, Object> headerContentHeaders = null;
+		String token = null;
 
 		headersParts.put("Is-Enabled-Daps-Interaction", isEnabledDapsInteraction);
 		headersParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 		headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledDataAppWebSocket);
 		
 		if (eccHttpSendRouter.equals("http-header")) { 
-			try {
-				// header content headers will be set in he http-headers of the MultipartMessage
-				headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
-			} catch (Exception e) {
-				logger.error("Mandatory headers of the multipart message header part are missing or null:", e);
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
+			// create Message object from IDS-* headers, needs for UsageControl flow
+			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
+			message = multipartMessageService.getMessage(header);
+			
+			if (headersParts.get("IDS-SecurityToken-TokenValue") != null) {
+				token = headersParts.get("IDS-SecurityToken-TokenValue").toString();
 			}
-
 			if (exchange.getIn().getBody() != null) {
 				payload = exchange.getIn().getBody(String.class);
 			} else {
 				logger.error("Payload is null");
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
-			// create Message object from IDS-* headers, needs for UsageControl flow
-			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
-			message = multipartMessageService.getMessage(header);
 			multipartMessage = new MultipartMessageBuilder()
-					.withHttpHeader(headerService.convertMapToStringString(headerContentHeaders))
-					.withHeaderContent(message)
 					.withHeaderContent(header)
-					.withPayloadContent(payload).build();
+					.withPayloadContent(payload)
+					.withToken(token).build();
 			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));
 
 		} else {
@@ -121,9 +116,15 @@ public class ConsumerParseReceivedConnectorRequestProcessor implements Processor
 					DataHandler dtHeader = (DataHandler) headersParts.get("header");
 					header = IOUtils.toString(dtHeader.getInputStream(), Charset.forName("UTF-8"));
 				}
+				
+				message = multipartMessageService.getMessage(header);
+				
 				payload = headersParts.get("payload").toString();
-
-				multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload)
+				
+				if (isEnabledDapsInteraction) {
+					token = multipartMessageService.getToken(message);
+				}
+				multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload).withToken(token)
 						.build();
 
 				headersParts.put("Payload-Content-Type",

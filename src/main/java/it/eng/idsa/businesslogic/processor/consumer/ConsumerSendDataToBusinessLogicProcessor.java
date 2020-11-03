@@ -76,7 +76,8 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 				responseString = MultipartMessageProcessor
 						.multipartMessagetoString(multipartMessageService.addTokenToMultipartMessage(multipartMessage), false);
 			} else {
-				responseString = multipartMessage.getHeaderContentString();
+				responseString = MultipartMessageProcessor
+						.multipartMessagetoString(multipartMessage, false);
 			}
 			contentType = headersParts.getOrDefault("Content-Type", "multipart/mixed").toString();
 		}

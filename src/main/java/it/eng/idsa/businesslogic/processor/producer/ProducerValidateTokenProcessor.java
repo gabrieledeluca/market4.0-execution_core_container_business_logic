@@ -46,15 +46,8 @@ public class ProducerValidateTokenProcessor implements Processor {
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 		
-		String token = null;
-		Message message = null;
-		// TODO multipartMessage.getToken() in both cases - ProducerParseReceivedResponseMessage
-		if (eccHttpSendRouter.equals("http-header")) {
-			token = multipartMessage.getToken();
-		}else {
-			message = multipartMessage.getHeaderContent();
-			token = multipartMessageService.getToken(message);
-		}
+		String token = multipartMessage.getToken();
+		Message message = multipartMessage.getHeaderContent();
 		logger.info("token: ", token);
 		
 		// Check is "token" valid

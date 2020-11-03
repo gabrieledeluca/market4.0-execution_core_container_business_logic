@@ -95,8 +95,8 @@ public class ProducerUsageControlProcessor implements Processor {
             MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 //            if (openDataAppReceiverRouter.equals("http-header")) {
 //            	header = multipartMessage.getHeaderContentString();
-            	header = multipartMessageService.removeToken(multipartMessage.getHeaderContent());
-            	payload = multipartMessage.getPayloadContent();
+//            	header = multipartMessageService.removeToken(multipartMessage.getHeaderContent());
+//            	payload = multipartMessage.getPayloadContent();
 //            } else {
 //            	Map<String, Object> headers = exchange.getIn().getHeaders();
 //            	header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(exchange.getIn().getHeaders());

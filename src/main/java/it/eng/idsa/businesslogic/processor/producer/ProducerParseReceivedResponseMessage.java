@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.multipart.builder.MultipartMessageBuilder;
@@ -38,9 +39,15 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 
 	@Autowired
 	private HttpHeaderService headerService;
+	
+	@Autowired
+	private MultipartMessageService multipartMessageService;
 
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
+	
+	@Value("${application.isEnabledDapsInteraction}")
+	private boolean isEnabledDapsInteraction;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
@@ -51,20 +58,18 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 		Message message = null;
 		MultipartMessage multipartMessage = null;
 		Map<String, Object> headerContentHeaders = null;
+		String token = null;
 
 		if (eccHttpSendRouter.equals("http-header")) {
-			// header content headers will be set in he http-headers of the MultipartMessage
-			headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
-
 			if (exchange.getIn().getBody() != null) {
 				payload = exchange.getIn().getBody(String.class);
 			} else {
 				logger.error("Payload is null");
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
-			header = headerService.getHeaderMessagePartFromHttpHeadersWithToken(headerContentHeaders);
+			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
 			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));
-			String token = null;
+			
 			if(headersParts.get("IDS-SecurityToken-TokenValue") != null) {
 				token = (String)headersParts.get("IDS-SecurityToken-TokenValue");
 			}
@@ -107,11 +112,16 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 					DataHandler dtHeader = (DataHandler) headersParts.get("header");
 					header = IOUtils.toString(dtHeader.getInputStream(), Charset.forName("UTF-8"));
 				}
+				message = multipartMessageService.getMessage(header);
+				
 				payload = headersParts.get("payload").toString();
-				multipartMessage = new MultipartMessageBuilder()
-						.withHeaderContent(header)
-						.withPayloadContent(payload)
-						.build();
+				if (isEnabledDapsInteraction) {
+					token = multipartMessageService.getToken(message);
+				}
+					multipartMessage = new MultipartMessageBuilder().withHeaderContent(header)
+							.withPayloadContent(payload)
+							.withToken(token)
+							.build();
 			} catch (Exception e) {
 				logger.error("Error parsing multipart message:", e);
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);

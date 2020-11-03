@@ -94,7 +94,12 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 		logger.info("token=" + token);
 		if (eccHttpSendRouter.equals("http-header")) {
 			//TODO move this to SendDataToBussinessLogicServiceImpl
-			transformJWTTokenToHeaders(token, multipartMessage.getHttpHeaders());
+			multipartMessage = new MultipartMessageBuilder()
+					.withHttpHeader(multipartMessage.getHttpHeaders())
+					.withHeaderHeader(multipartMessage.getHeaderHeader())
+					.withPayloadHeader(multipartMessage.getPayloadHeader())
+					.withPayloadContent(multipartMessage.getPayloadContent())
+					.withToken(token).build();
 		} else {
 			String messageStringWithToken = multipartMessageService.addToken(message, token);
 			logger.info("messageStringWithToken=" + messageStringWithToken);
@@ -113,17 +118,17 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 
 	}
 
-	private void transformJWTTokenToHeaders(String token, Map<String, String> headersPart)
+	private void transformJWTTokenToHeaders(String token, Map<String, Object> headersParts)
 			throws JsonMappingException, JsonProcessingException, ParseException {
 		Token tokenJsonValue = new TokenBuilder()._tokenFormat_(TokenFormat.JWT)._tokenValue_(token).build();
 		String tokenValueSerialized = new Serializer().serializePlainJson(tokenJsonValue);
 		JSONParser parser = new JSONParser();
 		JSONObject jsonObjectToken = (JSONObject) parser.parse(tokenValueSerialized);
 
-		headersPart.put("IDS-SecurityToken-Type", jsonObjectToken.get("@type").toString());
-		headersPart.put("IDS-SecurityToken-Id", tokenJsonValue.getId().toString());
-		headersPart.put("IDS-SecurityToken-TokenFormat", tokenJsonValue.getTokenFormat().toString());
-		headersPart.put("IDS-SecurityToken-TokenValue", token);
+		headersParts.put("IDS-SecurityToken-Type", jsonObjectToken.get("@type").toString());
+		headersParts.put("IDS-SecurityToken-Id", tokenJsonValue.getId().toString());
+		headersParts.put("IDS-SecurityToken-TokenFormat", tokenJsonValue.getTokenFormat().toString());
+		headersParts.put("IDS-SecurityToken-TokenValue", token);
 	}
 
 }

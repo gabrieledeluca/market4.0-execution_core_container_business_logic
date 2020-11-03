@@ -43,23 +43,14 @@ public class ConsumerValidateTokenProcessor implements Processor {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		
-		Message message = null;
 		
 		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 		
 		Map<String, Object> multipartMessageParts = null;
 		
-		String token = null;
-		if (eccHttpSendRouter.equals("http-header")) {
-			token = multipartMessage.getHttpHeaders().get("IDS-SecurityToken-TokenValue");
-		}else {
-			// Get "multipartMessageParts" from the input "exchange"
-//			multipartMessageParts = exchange.getIn().getBody(HashMap.class);
-//			message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
-			// Get "token" from the input "multipartMessageParts"
-			token = multipartMessageService.getToken(multipartMessage.getHeaderContent());
+		String token = multipartMessage.getToken();
+		Message message = multipartMessage.getHeaderContent();
 			
-		}
 		logger.info("token: ", token);
 		
 		// Check is "token" valid
