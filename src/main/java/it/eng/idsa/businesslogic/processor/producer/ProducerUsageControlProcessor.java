@@ -91,22 +91,11 @@ public class ProducerUsageControlProcessor implements Processor {
         String header = null;
         String payload = null;
         try {
-//            String multipartMessageBody = exchange.getIn().getBody().toString();
-            MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
-//            if (openDataAppReceiverRouter.equals("http-header")) {
-//            	header = multipartMessage.getHeaderContentString();
-//            	header = multipartMessageService.removeToken(multipartMessage.getHeaderContent());
-//            	payload = multipartMessage.getPayloadContent();
-//            } else {
-//            	Map<String, Object> headers = exchange.getIn().getHeaders();
-//            	header = httpHeaderService.getHeaderMessagePartFromHttpHeadersWithoutToken(exchange.getIn().getHeaders());
-//            	message = multipartMessageService.getMessageFromHeaderMap(
-//            			httpHeaderService.getHeaderMessagePartAsMap(headers));
-//            	header = multipartMessageService.getHeaderContentString(multipartMessageBody);
-//            	payload = multipartMessageService.getPayloadContent(multipartMessageBody);
-//            }
-            message = multipartMessageService.getMessage(header);
-            logger.info("from: " + exchange.getFromEndpoint());
+			MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
+			header = multipartMessage.getHeaderContentString();
+			payload = multipartMessage.getPayloadContent();
+			message = multipartMessageService.getMessage(header);
+			logger.info("from: " + exchange.getFromEndpoint());
             logger.info("Message Body: " + payload);
             logger.info("Message Body Out: " + exchange.getOut().getBody(String.class));
 

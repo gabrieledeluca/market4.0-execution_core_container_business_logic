@@ -96,7 +96,7 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 			exchange.getOut().setHeaders(headerParts);	
 		} else {
 		    exchange.getOut().setHeaders(exchange.getIn().getHeaders());
-            exchange.getOut().setBody(exchange.getIn().getBody());
+            exchange.getOut().setBody(multipartMessage);
 		}
 
 		if (!isEnabledClearingHouse) {

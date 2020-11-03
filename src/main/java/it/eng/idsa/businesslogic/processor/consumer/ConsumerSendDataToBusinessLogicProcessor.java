@@ -71,6 +71,9 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 				// DataApp endpoint not http-header, must convert message to http headers
 				headersParts.putAll(headerService.prepareMessageForSendingAsHttpHeaders(multipartMessage));
 			}
+			if (isEnabledDapsInteraction) {
+				headersParts.put("IDS-SecurityToken-TokenValue", multipartMessage.getToken());
+			}
 		} else {
 			if(isEnabledDapsInteraction) {
 				responseString = MultipartMessageProcessor

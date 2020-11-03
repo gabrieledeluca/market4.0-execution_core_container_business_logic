@@ -71,7 +71,8 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));
 			
 			if(headersParts.get("IDS-SecurityToken-TokenValue") != null) {
-				token = (String)headersParts.get("IDS-SecurityToken-TokenValue");
+				token = headersParts.get("IDS-SecurityToken-TokenValue").toString();
+				headersParts.remove("IDS-SecurityToken-TokenValue");
 			}
 			multipartMessage = new MultipartMessageBuilder()
 					.withHeaderContent(header)

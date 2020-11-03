@@ -69,6 +69,7 @@ public class ConsumerParseReceivedConnectorRequestProcessor implements Processor
 			
 			if (headersParts.get("IDS-SecurityToken-TokenValue") != null) {
 				token = headersParts.get("IDS-SecurityToken-TokenValue").toString();
+				headersParts.remove("IDS-SecurityToken-TokenValue");
 			}
 			if (exchange.getIn().getBody() != null) {
 				payload = exchange.getIn().getBody(String.class);
