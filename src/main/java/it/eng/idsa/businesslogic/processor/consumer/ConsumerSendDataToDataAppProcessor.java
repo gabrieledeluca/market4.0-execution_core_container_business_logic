@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
+import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.service.impl.SendDataToBusinessLogicServiceImpl;
@@ -64,12 +65,20 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 
 	@Value("${application.websocket.isEnabled}")
 	private boolean isEnabledWebSocket;
+	
+	@Autowired
+	private HttpHeaderService httpHeaderService;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
 
 		Map<String, Object> headerParts = exchange.getIn().getHeaders();
 		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
+		
+		if (!openDataAppReceiverRouter.equals("http-header")) {
+			httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
+        	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
+		}
 
 		// Get header, payload and message
 		Message message = null;

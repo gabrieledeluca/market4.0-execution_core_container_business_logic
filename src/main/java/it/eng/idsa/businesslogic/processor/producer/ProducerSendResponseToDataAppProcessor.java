@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationA;
+import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.util.HeaderCleaner;
 import it.eng.idsa.multipart.domain.MultipartMessage;
@@ -50,6 +51,9 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 
 	@Autowired(required = false)
 	WebSocketServerConfigurationA webSocketServerConfiguration;
+	
+	@Autowired
+	private HttpHeaderService httpHeaderService;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
@@ -72,6 +76,8 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 			// UsageControl enabled, still some processing needs to be done
 			switch (openDataAppReceiverRouter) {
 			case "form":
+				httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
+            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
 				HttpEntity resultEntity = multipartMessageService.createMultipartMessage(multipartMessage.getHeaderContentString(), 
 						multipartMessage.getPayloadContent(),
 						null, ContentType.APPLICATION_JSON);
@@ -79,6 +85,8 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 				exchange.getOut().setBody(resultEntity.getContent());
 				break;
 			case "mixed":
+				httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
+            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
 				responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
 				Optional<String> boundary = getMessageBoundaryFromMessage(responseString);
 				contentType = "multipart/mixed; boundary=" + boundary.orElse("---aaa") + ";charset=UTF-8";

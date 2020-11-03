@@ -142,6 +142,8 @@ public class ProducerUsageControlProcessor implements Processor {
             if(openDataAppReceiverRouter.equals("http-header")) {
             	exchange.getOut().setBody(extractPayloadFromJson(ucObj.getPayload()));
             } else {
+            	httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
+            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
             	if(openDataAppReceiverRouter.equals("form")) {
             		HttpEntity resultEntity = multipartMessageService.createMultipartMessage(header, extractPayloadFromJson(ucObj.getPayload()),
             				null, ContentType.APPLICATION_JSON);
@@ -151,8 +153,6 @@ public class ProducerUsageControlProcessor implements Processor {
             		Optional<String> boundary = getMessageBoundaryFromMessage(responseMultipartMessageString);
          			String contentType = "multipart/mixed; boundary=" + boundary.orElse("---aaa") + ";charset=UTF-8";
          			exchange.getIn().getHeaders().put("Content-Type", contentType);
-	            	httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
-	            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
 	            	exchange.getOut().setBody(responseMultipartMessageString);
             	}
             }

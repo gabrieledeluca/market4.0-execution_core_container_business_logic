@@ -93,6 +93,7 @@ public class ConsumerGetTokenFromDapsProcessor implements Processor {
 			multipartMessage = new MultipartMessageBuilder()
 					.withHttpHeader(multipartMessage.getHttpHeaders())
 					.withHeaderHeader(multipartMessage.getHeaderHeader())
+                    .withHeaderContent(multipartMessage.getHeaderContent())
 					.withPayloadHeader(multipartMessage.getPayloadHeader())
 					.withPayloadContent(multipartMessage.getPayloadContent())
 					.withToken(token).build();
