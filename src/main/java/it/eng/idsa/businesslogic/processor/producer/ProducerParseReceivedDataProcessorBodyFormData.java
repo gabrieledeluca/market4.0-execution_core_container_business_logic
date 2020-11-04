@@ -1,5 +1,6 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -68,7 +69,7 @@ public class ProducerParseReceivedDataProcessorBodyFormData implements Processor
 			// Create multipart message parts
 			if (headesParts.containsKey("header.org.eclipse.jetty.servlet.contentType")) {
 				DataHandler dtHeader = (DataHandler) receivedDataHeader.get("header");
-				header = IOUtils.toString(dtHeader.getInputStream());
+				header = IOUtils.toString(dtHeader.getInputStream(), StandardCharsets.UTF_8);
 			} else {
 				header = receivedDataHeader.get("header").toString();
 			}
@@ -89,7 +90,5 @@ public class ProducerParseReceivedDataProcessorBodyFormData implements Processor
 			logger.error("Error parsing multipart message:", e);
 			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, message);
 		}
-
 	}
-
 }

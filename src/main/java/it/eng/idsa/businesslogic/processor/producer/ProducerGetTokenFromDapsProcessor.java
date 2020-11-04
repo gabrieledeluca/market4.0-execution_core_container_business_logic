@@ -6,23 +6,12 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-
 import de.fraunhofer.iais.eis.Message;
-import de.fraunhofer.iais.eis.Token;
-import de.fraunhofer.iais.eis.TokenBuilder;
-import de.fraunhofer.iais.eis.TokenFormat;
-import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
 import it.eng.idsa.businesslogic.service.DapsService;
-import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
@@ -48,9 +37,6 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 
 	@Autowired
 	private DapsService dapsService;
-
-	@Autowired
-	private HttpHeaderService httpHeaderService;
 
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
@@ -118,7 +104,7 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 		exchange.getOut().setHeaders(headersParts);
 
 	}
-
+/*
 	private void transformJWTTokenToHeaders(String token, Map<String, Object> headersParts)
 			throws JsonMappingException, JsonProcessingException, ParseException {
 		Token tokenJsonValue = new TokenBuilder()._tokenFormat_(TokenFormat.JWT)._tokenValue_(token).build();
@@ -131,5 +117,5 @@ public class ProducerGetTokenFromDapsProcessor implements Processor {
 		headersParts.put("IDS-SecurityToken-TokenFormat", tokenJsonValue.getTokenFormat().toString());
 		headersParts.put("IDS-SecurityToken-TokenValue", token);
 	}
-
+*/
 }

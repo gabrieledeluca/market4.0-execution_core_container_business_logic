@@ -54,6 +54,9 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 	
 	@Autowired
 	private HttpHeaderService httpHeaderService;
+	
+	@Autowired
+	private HeaderCleaner headerCleaner;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
@@ -98,7 +101,7 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 				exchange.getOut().setBody(responseString);
 				break;
 			}
-			HeaderCleaner.removeTechnicalHeaders(headerParts);
+			headerCleaner.removeTechnicalHeaders(headerParts);
 			headerParts.put(Exchange.CONTENT_TYPE, contentType);
 //			exchange.getOut().setBody(responseString);
 			exchange.getOut().setHeaders(headerParts);	

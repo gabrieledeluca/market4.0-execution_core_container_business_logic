@@ -1,6 +1,6 @@
 package it.eng.idsa.businesslogic.processor.consumer;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import javax.activation.DataHandler;
@@ -133,7 +133,7 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 					header = headersParts.get("header").toString();
 				}else {
 					DataHandler dtHeader = (DataHandler) headersParts.get("header");
-					header = IOUtils.toString(dtHeader.getInputStream(), Charset.forName("UTF-8"));
+					header = IOUtils.toString(dtHeader.getInputStream(), StandardCharsets.UTF_8);
 				}
 				payload = headersParts.get("payload").toString();
 

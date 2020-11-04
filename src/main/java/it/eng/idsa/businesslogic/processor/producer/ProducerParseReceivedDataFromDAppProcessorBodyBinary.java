@@ -46,9 +46,8 @@ public class ProducerParseReceivedDataFromDAppProcessorBodyBinary implements Pro
 		String header = null;
 		String payload = null;
 		Message message = null;
-		Map<String, Object> headesParts = new HashMap();
-		Map<String, Object> multipartMessageParts = new HashMap();
-		String receivedDataBodyBinary = null;
+		Map<String, Object> headesParts = new HashMap<>();
+		Map<String, Object> multipartMessageParts = new HashMap<>();
 
 		// Get from the input "exchange"
 		Map<String, Object> receivedDataHeader = exchange.getIn().getHeaders();

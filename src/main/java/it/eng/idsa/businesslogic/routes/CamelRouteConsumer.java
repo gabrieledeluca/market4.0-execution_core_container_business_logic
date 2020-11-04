@@ -12,7 +12,6 @@ import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerExceptionMultiPartMessageProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerFileRecreatorProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerGetTokenFromDapsProcessor;
-import it.eng.idsa.businesslogic.processor.consumer.ConsumerHttpHeaderProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerMultiPartMessageProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerParseReceivedConnectorRequestProcessor;
 import it.eng.idsa.businesslogic.processor.consumer.ConsumerSendDataToBusinessLogicProcessor;
@@ -49,9 +48,6 @@ public class CamelRouteConsumer extends RouteBuilder {
 	
 	@Autowired
 	ConsumerMultiPartMessageProcessor multiPartMessageProcessor;
-	
-	@Autowired
-	ConsumerHttpHeaderProcessor httpHeaderProcessor;
 	
 	@Autowired
 	ConsumerSendDataToDataAppProcessor sendDataToDataAppProcessor;
@@ -116,7 +112,6 @@ public class CamelRouteConsumer extends RouteBuilder {
 		// Camel SSL - Endpoint: B
 		if(!isEnabledIdscp && !isEnabledWebSocket) {
 			from("jetty://https4://0.0.0.0:" + configuration.getCamelConsumerPort() + "/incoming-data-channel/receivedMessage")
-//					.process(httpHeaderProcessor)
 					.process(connectorRequestProcessor)
 					.choice()
 					.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
@@ -126,6 +121,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 						.when(header("Is-Enabled-DataApp-WebSocket").isEqualTo(true))
 							.process(sendDataToDataAppProcessorOverWS)
 						.when(header("Is-Enabled-DataApp-WebSocket").isEqualTo(false))
+							.removeHeaders("Camel*")
 							.process(sendDataToDataAppProcessor)
 						.endChoice()
 						.process(multiPartMessageProcessor)
@@ -142,6 +138,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 						.when(header("Is-Enabled-DataApp-WebSocket").isEqualTo(true))
 							.process(sendDataToDataAppProcessorOverWS)
 						.when(header("Is-Enabled-DataApp-WebSocket").isEqualTo(false))
+							.removeHeaders("Camel*")
 							.process(sendDataToDataAppProcessor)
 						.endChoice()
 						.process(multiPartMessageProcessor)
@@ -151,6 +148,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 						.when(header("Is-Enabled-Clearing-House").isEqualTo(true))
 							//.process(sendTransactionToCHProcessor)
 						.endChoice()
+						.removeHeaders("Camel*")
 					.endChoice();
 		} else if (isEnabledIdscp || isEnabledWebSocket) {
 			// End point B. ECC communication (Web Socket or IDSCP)

@@ -19,9 +19,9 @@ public class HeaderCleaner {
 		technicalHeaders = headers;
 	}
 
-	private static String technicalHeaders;
+	private String technicalHeaders;
 
-	public static void removeTechnicalHeaders(Map<String, Object> headers) {
+	public void removeTechnicalHeaders(Map<String, Object> headers) {
 
 		List<String> technicalHeadersList = Arrays.asList(technicalHeaders.split(","));
 

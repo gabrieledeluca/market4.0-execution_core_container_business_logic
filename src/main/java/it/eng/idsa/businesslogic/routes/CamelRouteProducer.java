@@ -91,9 +91,6 @@ public class CamelRouteProducer extends RouteBuilder {
 	CamelContext camelContext;
 	
 	@Autowired
-	private ProducerCreateRegistrationMessageProcessor createRegitratioMessageProducer;
-	
-	@Autowired
 	private ProducerCreateRegistrationMessageProcessor createRegistratioMessageProducer;
 	@Autowired
 	private ProducerCreateUpdateMessageProcessor createUpdateMessageProducer;
@@ -160,6 +157,7 @@ public class CamelRouteProducer extends RouteBuilder {
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                 .process(sendTransactionToCHProcessor)
                             .endChoice()
+							.removeHeaders("Camel*")
                         .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
@@ -170,6 +168,7 @@ public class CamelRouteProducer extends RouteBuilder {
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                     .process(sendTransactionToCHProcessor)
                             .endChoice()
+							.removeHeaders("Camel*")
                     .endChoice();
 
             // Camel SSL - Endpoint: A - Body form-data
@@ -188,6 +187,7 @@ public class CamelRouteProducer extends RouteBuilder {
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                     .process(sendTransactionToCHProcessor)
                             .endChoice()
+							.removeHeaders("Camel*")
                         .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
                             // Send data to Endpoint B
                             .process(sendDataToBusinessLogicProcessor)
@@ -198,6 +198,8 @@ public class CamelRouteProducer extends RouteBuilder {
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                     .process(sendTransactionToCHProcessor)
                             .endChoice()
+							.removeHeaders("Camel*")
+
                     .endChoice();
             
          // Camel SSL - Endpoint: A - Http-header
@@ -218,6 +220,7 @@ public class CamelRouteProducer extends RouteBuilder {
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                     .process(sendTransactionToCHProcessor)
                             .endChoice()
+							.removeHeaders("Camel*")
                         .when(header("Is-Enabled-Daps-Interaction").isEqualTo(false))
         //					.process(sendToActiveMQ)
         //					.process(receiveFromActiveMQ)
@@ -230,6 +233,7 @@ public class CamelRouteProducer extends RouteBuilder {
                                 .when(header("Is-Enabled-Clearing-House").isEqualTo(true))
                                     .process(sendTransactionToCHProcessor)
                             .endChoice()
+							.removeHeaders("Camel*")
                     .endChoice();
             } else {
 				// End point A. Communication between Data App and ECC Producer.

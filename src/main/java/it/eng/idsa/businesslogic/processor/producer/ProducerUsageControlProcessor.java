@@ -74,6 +74,9 @@ public class ProducerUsageControlProcessor implements Processor {
 
 	@Value("${application.openDataAppReceiverRouter}")
 	private String openDataAppReceiverRouter;
+	
+	@Autowired
+	private HeaderCleaner headerCleaner;
 
     public ProducerUsageControlProcessor() {
         gson = ConsumerUsageControlProcessor.createGson();
@@ -156,7 +159,7 @@ public class ProducerUsageControlProcessor implements Processor {
 	            	exchange.getOut().setBody(responseMultipartMessageString);
             	}
             }
-            HeaderCleaner.removeTechnicalHeaders(exchange.getIn().getHeaders());
+            headerCleaner.removeTechnicalHeaders(exchange.getIn().getHeaders());
             exchange.getOut().setHeaders(exchange.getIn().getHeaders());
         } catch (Exception e) {
             logger.error("Usage Control Enforcement has failed with MESSAGE: ", e.getMessage());
@@ -166,7 +169,6 @@ public class ProducerUsageControlProcessor implements Processor {
         }
     }
     
-    //TODO
     /**
      * Used for purpose PIP
      * 	@ActionDescription(methodName = "purpose")

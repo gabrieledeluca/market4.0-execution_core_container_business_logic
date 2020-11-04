@@ -28,7 +28,6 @@ import it.eng.idsa.businesslogic.configuration.WebSocketClientConfiguration;
 import it.eng.idsa.businesslogic.processor.producer.websocket.client.FileStreamingBean;
 import it.eng.idsa.businesslogic.processor.producer.websocket.client.IdscpClientBean;
 import it.eng.idsa.businesslogic.processor.producer.websocket.client.MessageWebSocketOverHttpSender;
-import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.service.impl.SendDataToBusinessLogicServiceImpl;
@@ -73,9 +72,6 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
 
-	@Autowired
-	private HttpHeaderService headerService;
-	
 	@Autowired
 	private SendDataToBusinessLogicServiceImpl sendDataToBusinessLogicService;
 
@@ -164,7 +160,6 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 				response.close();
 			}
 		}
-
 	}
 
 	private CloseableHttpResponse sendMultipartMessage(Map<String, Object> headerParts, String forwardTo, Message message, MultipartMessage multipartMessage)

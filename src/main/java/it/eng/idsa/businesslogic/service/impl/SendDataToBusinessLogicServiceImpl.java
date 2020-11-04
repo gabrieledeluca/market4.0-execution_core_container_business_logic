@@ -55,6 +55,9 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 	@Autowired
 	private HttpHeaderService headerService;
 
+	@Autowired
+	private HeaderCleaner headerCleaner;
+
 	@Override
 	public CloseableHttpResponse sendMessageBinary(String address, MultipartMessage multipartMessage,
 			Map<String, Object> headerParts, boolean eccCommunication) throws UnsupportedEncodingException, JsonProcessingException {
@@ -175,7 +178,7 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 	}
 
 	private void addHeadersToHttpPost(Map<String, Object> headesParts, HttpPost httpPost) {
-		HeaderCleaner.removeTechnicalHeaders(headesParts);
+		headerCleaner.removeTechnicalHeaders(headesParts);
 
 		headesParts.forEach((name, value) -> {
 			if (!name.equals("Content-Length") && !name.equals("Content-Type")) {

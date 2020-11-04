@@ -93,8 +93,6 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 				break;
 			}
 			case "form": {
-				// response = forwardMessageFormData(configuration.getOpenDataAppReceiver(),
-				// header, payload, headerParts);
 				response = sendDataToBusinessLogicService.sendMessageFormData(configuration.getOpenDataAppReceiver(),
 						multipartMessage, headerParts, false);
 				break;

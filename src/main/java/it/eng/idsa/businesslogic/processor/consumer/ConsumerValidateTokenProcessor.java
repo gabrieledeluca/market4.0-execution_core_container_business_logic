@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
 import it.eng.idsa.businesslogic.service.DapsService;
-import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
 import it.eng.idsa.multipart.domain.MultipartMessage;
@@ -33,10 +32,7 @@ public class ConsumerValidateTokenProcessor implements Processor {
 	
 	@Autowired
 	DapsService dapsService;
-	
-	@Autowired
-	private MultipartMessageService multipartMessageService;
-	
+
 	@Autowired
 	private RejectionMessageService rejectionMessageService;
 
@@ -68,7 +64,6 @@ public class ConsumerValidateTokenProcessor implements Processor {
 		if (eccHttpSendRouter.equals("http-header")) {
 			exchange.getOut().setBody(exchange.getIn().getBody());
 		}else {
-//			multipartMessageParts.put("isTokenValid", isTokenValid);
 			exchange.getOut().setBody(multipartMessageParts);
 		}
 		exchange.getOut().setBody(multipartMessage);

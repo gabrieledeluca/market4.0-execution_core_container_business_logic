@@ -1,6 +1,6 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import javax.activation.DataHandler;
@@ -57,7 +57,6 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		Message message = null;
 		MultipartMessage multipartMessage = null;
-		Map<String, Object> headerContentHeaders = null;
 		String token = null;
 
 		if (eccHttpSendRouter.equals("http-header")) {
@@ -111,7 +110,7 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 					header = headersParts.get("header").toString();
 				} else {
 					DataHandler dtHeader = (DataHandler) headersParts.get("header");
-					header = IOUtils.toString(dtHeader.getInputStream(), Charset.forName("UTF-8"));
+					header = IOUtils.toString(dtHeader.getInputStream(), StandardCharsets.UTF_8);
 				}
 				message = multipartMessageService.getMessage(header);
 				
@@ -128,10 +127,7 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
 		}
-		
 		exchange.getOut().setHeaders(headersParts);
 		exchange.getOut().setBody(multipartMessage);
-
 	}
-
 }

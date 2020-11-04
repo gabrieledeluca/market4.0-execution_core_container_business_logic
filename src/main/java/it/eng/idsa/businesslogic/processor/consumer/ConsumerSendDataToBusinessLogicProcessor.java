@@ -51,6 +51,9 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 	
 	@Autowired
 	private HttpHeaderService headerService;
+	
+	@Autowired
+	private HeaderCleaner headerCleaner;
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
@@ -100,7 +103,7 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 		if (isEnabledWebSocket) {
 			headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledWebSocket);
 		}
-		HeaderCleaner.removeTechnicalHeaders(headersParts);
+		headerCleaner.removeTechnicalHeaders(headersParts);
 		headersParts.put("Payload-Content-Type", contentType);
 		exchange.getOut().setBody(responseString);
 		exchange.getOut().setHeaders(headersParts);
