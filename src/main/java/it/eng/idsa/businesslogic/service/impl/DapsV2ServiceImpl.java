@@ -19,7 +19,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
@@ -88,17 +87,15 @@ public class DapsV2ServiceImpl implements DapsService {
     private String keyStorePassword;
     @Value("${application.keystoreAliasName}")
     private String keystoreAliasName;
-    //@Value("${application.connectorUUID}")
-    //private String connectorUUID;
     @Value("${application.dapsJWKSUrl}")
     private String dapsJWKSUrl;
 
     public String getJwtToken() {
 
-        String dynamicAttributeToken = "INVALID_TOKEN";
+//        String dynamicAttributeToken = "INVALID_TOKEN";
         String targetAudience = "idsc:IDS_CONNECTORS_ALL";
 
-        Map<String, Object> jwtClaims = null;
+//        Map<String, Object> jwtClaims = null;
 
         // Try clause for setup phase (loading keys, building trust manager)
         try {
@@ -166,16 +163,16 @@ public class DapsV2ServiceImpl implements DapsService {
             final SSLContext sslContext = SSLContext.getInstance("SSL");
             sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
             // Create an ssl socket factory with our all-trusting manager
-            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-                client = new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS)
-                        .writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
-                        .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
-                        .hostnameVerifier(new HostnameVerifier() {
-                            @Override
-                            public boolean verify(String hostname, SSLSession session) {
-                                return true;
-                            }
-                        }).build();
+//            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+            client = new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
+                    .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
+                    .hostnameVerifier(new HostnameVerifier() {
+                        @Override
+                        public boolean verify(String hostname, SSLSession session) {
+                            return true;
+                        }
+                    }).build();
 
             // Get AKI
             //GET 2.5.29.14	SubjectKeyIdentifier / 2.5.29.35	AuthorityKeyIdentifier
@@ -229,7 +226,7 @@ public class DapsV2ServiceImpl implements DapsService {
                             .add("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
                             .build();
 
-            OkHttpClient.Builder builder = new OkHttpClient.Builder();
+//            OkHttpClient.Builder builder = new OkHttpClient.Builder();
 
 //            // configure client with trust manager
 //            OkHttpClient client =

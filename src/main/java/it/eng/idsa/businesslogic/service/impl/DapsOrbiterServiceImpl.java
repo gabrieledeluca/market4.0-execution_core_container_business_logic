@@ -16,6 +16,8 @@ import java.security.cert.CertificateException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
@@ -28,7 +30,6 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
@@ -74,11 +77,8 @@ public class DapsOrbiterServiceImpl implements DapsService {
 
     @Value("${application.daps.orbiter.privateKey}")
     private String dapsOrbiterPrivateKey;
-    @Value("${application.daps.orbiter.certificate}")
-    private String dapsOrbiterCertificate; 
     @Value("${application.daps.orbiter.password}")
     private String dapsOrbiterPassword;
-
 
     @Override
     public String getJwtToken() {
@@ -112,12 +112,13 @@ public class DapsOrbiterServiceImpl implements DapsService {
             logger.info("Request token: " + jws);
 
             // build form body to embed client assertion into post request
-            JSONObject jsonObject = new JSONObject();
+            Map<String, String> jsonObject = new HashMap<>();
             jsonObject.put("grant_type", "client_credentials");
             jsonObject.put("client_assertion_type", "jwt-bearer");
             jsonObject.put("client_assertion", jws);
             jsonObject.put("scope", "all");
-            String jsonString = jsonObject.toString();
+            Gson gson = new GsonBuilder().create();
+            String jsonString = gson.toJson(jsonObject);
             RequestBody formBody = RequestBody.create(JSON, jsonString); // new
 
             Request requestDaps = new Request.Builder().url(dapsUrl)
@@ -229,9 +230,10 @@ public class DapsOrbiterServiceImpl implements DapsService {
         
 		try {
 
-			JSONObject jsonObject = new JSONObject();
+			Map<String, String> jsonObject = new HashMap<>();
             jsonObject.put("token", tokenValue);
-            String jsonString = jsonObject.toString();
+            Gson gson = new GsonBuilder().create();
+            String jsonString = gson.toJson(jsonObject);
             RequestBody formBody = RequestBody.create(JSON, jsonString); // new
 	            
 			//@formatter:off
