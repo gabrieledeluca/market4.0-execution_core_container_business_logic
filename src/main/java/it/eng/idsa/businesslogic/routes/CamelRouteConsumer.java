@@ -154,7 +154,7 @@ public class CamelRouteConsumer extends RouteBuilder {
 			// End point B. ECC communication (Web Socket or IDSCP)
 			from("timer://timerEndpointB?repeatCount=-1") //EndPoint B
 					.process(fileRecreatorProcessor)
-					.process(multiPartMessageProcessor)
+					.process(connectorRequestProcessor)
 					.choice()
 						.when(header("Is-Enabled-Daps-Interaction").isEqualTo(true))
 							.process(validateTokenProcessor)

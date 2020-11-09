@@ -60,9 +60,6 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 	@Value("${camel.component.jetty.use-global-ssl-context-parameters}")
 	private boolean isJettySSLEnabled;
 
-	@Value("${application.isEnabledDapsInteraction}")
-	private boolean isEnabledDapsInteraction;
-
 	@Value("${application.openDataAppReceiverRouter}")
 	private String openDataAppReceiverRouter;
 
@@ -91,8 +88,6 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 		Map<String, Object> headerParts = exchange.getIn().getHeaders();
 
-		String messageWithToken = null;
-
 		String payload = null;
 		Message message = null;
 		String header =null;
@@ -119,14 +114,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 						message);
 			}
 			// -- Send data using IDSCP - (Client) - WebSocket
-			String response;
-			if (Boolean.parseBoolean(headerParts.get("Is-Enabled-Daps-Interaction").toString())) {
-				response = this.sendMultipartMessageWebSocket(this.webSocketHost, this.webSocketPort, messageWithToken,
-						payload, message);
-			} else {
-				response = this.sendMultipartMessageWebSocket(this.webSocketHost, this.webSocketPort, header, payload,
+			String response = this.sendMultipartMessageWebSocket(this.webSocketHost, this.webSocketPort, header, payload,
 						message);
-			}
 			// Handle response
 			this.handleResponseWebSocket(exchange, message, response, forwardTo, multipartMessageString);
 		} else if (isEnabledWebSocket) {
@@ -140,14 +129,8 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			}
 
 			// -- Send data using HTTPS - (Client) - WebSocket
-			String response;
-			if (Boolean.parseBoolean(headerParts.get("Is-Enabled-Daps-Interaction").toString())) {
-				response = messageWebSocketOverHttpSender.sendMultipartMessageWebSocketOverHttps(this.webSocketHost,
-						this.webSocketPort, messageWithToken, payload, message);
-			} else {
-				response = messageWebSocketOverHttpSender.sendMultipartMessageWebSocketOverHttps(this.webSocketHost,
+			String response = messageWebSocketOverHttpSender.sendMultipartMessageWebSocketOverHttps(this.webSocketHost,
 						this.webSocketPort, header, payload, message);
-			}
 			// Handle response
 			this.handleResponseWebSocket(exchange, message, response, forwardTo, multipartMessageString);
 		} else {
@@ -247,9 +230,9 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			logger.info("Successful response: " + responseString);
 			// TODO:
 			// Set original body which is created using the original payload and header
-			exchange.getOut().setHeaders(exchange.getIn().getHeaders());
 			exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
-			exchange.getOut().setBody(responseString);
+			exchange.getOut().setHeader("header", multipartMessageService.getHeaderContentString(responseString));
+			exchange.getOut().setHeader("payload", multipartMessageService.getPayloadContent(responseString));
 		}
 	}
 
