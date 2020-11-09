@@ -29,7 +29,6 @@ public class ProducerProcessRegistrationResponseProcessor implements Processor {
 		}
 		String finalString = finalStringBuilder.toString();
 		exchange.getOut().setBody(finalString);
+		exchange.getOut().setHeaders(exchange.getIn().getHeaders());
 	}
-
-	
 }

@@ -19,16 +19,20 @@ import org.springframework.stereotype.Service;
 
 import de.fraunhofer.iais.eis.BaseConnectorBuilder;
 import de.fraunhofer.iais.eis.Connector;
-import de.fraunhofer.iais.eis.ConnectorEndpointBuilder;
 import de.fraunhofer.iais.eis.ConnectorUnavailableMessageBuilder;
 import de.fraunhofer.iais.eis.ConnectorUpdateMessageBuilder;
+import de.fraunhofer.iais.eis.ContentType;
 import de.fraunhofer.iais.eis.ContractOffer;
 import de.fraunhofer.iais.eis.ContractOfferBuilder;
 import de.fraunhofer.iais.eis.DynamicAttributeToken;
 import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder;
+import de.fraunhofer.iais.eis.Language;
 import de.fraunhofer.iais.eis.Message;
 import de.fraunhofer.iais.eis.Permission;
 import de.fraunhofer.iais.eis.PermissionBuilder;
+import de.fraunhofer.iais.eis.QueryLanguage;
+import de.fraunhofer.iais.eis.QueryMessageBuilder;
+import de.fraunhofer.iais.eis.QueryScope;
 import de.fraunhofer.iais.eis.Resource;
 import de.fraunhofer.iais.eis.ResourceBuilder;
 import de.fraunhofer.iais.eis.ResourceCatalog;
@@ -65,7 +69,7 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 
 	@PostConstruct
 	public void initConnector() throws ConstraintViolationException, URISyntaxException {
-		issuerConnectorURI = new URI("https://test.connector.de/" + RandomStringUtils.randomAlphabetic(3));
+		issuerConnectorURI = new URI("https://eng.true-connector.com/" + "igor");//RandomStringUtils.randomAlphabetic(3));
 		this.connector = new BaseConnectorBuilder(issuerConnectorURI)
 				._maintainer_(new URI(selfDescriptionConfiguration.getCompanyURI()))
 				._curator_(issuerConnectorURI)
@@ -73,11 +77,11 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 				._securityProfile_(SecurityProfile.BASE_SECURITY_PROFILE) // Infomodel version 4.0.0
 				._maintainer_(new URI("https://maintainerURL" + RandomStringUtils.randomAlphabetic(3)))
 				._inboundModelVersion_(Util.asList(new String[] { selfDescriptionConfiguration.getInfoModelVersion() }))
-				._title_(Util.asList(new TypedLiteral("Test Fraunhofer Digital Broker " + RandomStringUtils.randomAlphabetic(3), "en")))
-				._description_(Util.asList(new TypedLiteral("This is selfDescription description " + RandomStringUtils.randomAlphabetic(3), "en")))
+				._title_(Util.asList(new TypedLiteral("Test Fraunhofer Digital Broker " + RandomStringUtils.randomAlphabetic(3))))
+				._description_(Util.asList(new TypedLiteral("This is selfDescription description for Eng true connector")))
 				._outboundModelVersion_(selfDescriptionConfiguration.getInfoModelVersion())
-				._hasDefaultEndpoint_(new ConnectorEndpointBuilder(new URI("https://someURL/selfDescription")).build())
-				._hasEndpoint_(Util.asList(new ConnectorEndpointBuilder(new URI("https://someURL/incoming-data-channel/receivedMessage")).build()))
+//				._hasDefaultEndpoint_(new ConnectorEndpointBuilder(new URI("https://someURL/selfDescription")).build())
+//				._hasEndpoint_(Util.asList(new ConnectorEndpointBuilder(new URI("https://someURL/incoming-data-channel/receivedMessage")).build()))
 				.build();
 	}
 
@@ -104,12 +108,16 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 	private Resource getResource() throws ConstraintViolationException, URISyntaxException {
 		Resource offeredResource = (new ResourceBuilder())
 				._title_(Util.asList(
-						new TypedLiteral(selfDescriptionConfiguration.getResource().getTitle(), 
-								selfDescriptionConfiguration.getResource().getLanguage())))
+						new TypedLiteral(selfDescriptionConfiguration.getResource().getTitle())))
 				._description_(Util.asList(
-						new TypedLiteral(selfDescriptionConfiguration.getResource().getDescription(), 
-								selfDescriptionConfiguration.getResource().getLanguage())))
-				._contractOffer_(getContractOffers()).build();
+						new TypedLiteral(selfDescriptionConfiguration.getResource().getDescription())))
+//				._contractOffer_(getContractOffers())
+				._contentType_(ContentType.SCHEMA_DEFINITION)
+				._keyword_(Util.asList(new TypedLiteral("Engineering Ingegneria Informatica SpA"), 
+						new TypedLiteral("broker"), new TypedLiteral("trueConnector")))
+				._version_("1.0.0")
+				._language_(Util.asList(Language.EN, Language.IT))
+				.build();
 		return offeredResource;
 	}
 
@@ -179,12 +187,16 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 			throws ConstraintViolationException, URISyntaxException, DatatypeConfigurationException {
 
 		DynamicAttributeToken securityToken = getJwToken();
+		// Mandatory fields are: affectedConnector, securityToken, issuerConnector, senderAgent, modelVersion, issued
 		
-		return new ConnectorUnavailableMessageBuilder(new URI("http://industrialdataspace.org/connectorUnavailableMessage/1a421b8c-3407-44a8-aeb9-253f145c869a"))
+		return new ConnectorUnavailableMessageBuilder(new URI("http://industrialdataspace.org/connectorUnavailableMessage/"+ UUID.randomUUID().toString()))
 				._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))
+				._affectedConnector_(connector.getId())
 				._modelVersion_(selfDescriptionConfiguration.getInfoModelVersion())
 				._issuerConnector_(issuerConnectorURI)
 				._securityToken_(securityToken)
+				._senderAgent_(new URI("http://example.org"))
+				._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))
 				.build();
 	}
 
@@ -201,6 +213,22 @@ public class SelfDescriptionServiceImpl implements SelfDescriptionService {
 				._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))
 				._securityToken_(securityToken)
 				._affectedConnector_(connector.getId())
+				.build();
+	}
+
+	@Override
+	public Message getConnectorQueryMessage()
+			throws ConstraintViolationException, URISyntaxException, DatatypeConfigurationException {
+		DynamicAttributeToken securityToken = getJwToken();
+		
+		return new QueryMessageBuilder(new URI("https://w3id.org/idsa/autogen/queryMessage" + UUID.randomUUID().toString()))
+				._securityToken_(securityToken)
+				._senderAgent_(new URI("http://example.org"))
+				._modelVersion_(selfDescriptionConfiguration.getInfoModelVersion())
+				._issuerConnector_(issuerConnectorURI)
+				._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))
+				._queryLanguage_(QueryLanguage.SPARQL)
+				._queryScope_(QueryScope.ALL)
 				.build();
 	}
 

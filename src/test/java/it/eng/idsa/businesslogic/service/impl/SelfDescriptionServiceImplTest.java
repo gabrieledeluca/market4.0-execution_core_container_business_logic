@@ -67,19 +67,20 @@ public class SelfDescriptionServiceImplTest {
 	public void getConnectionString() {
 		String connectionString = selfDefinitionService.getConnectorAsString();
 		assertNotNull(connectionString);
-//		System.out.println(connectionString);
+		System.out.println(connectionString);
 
 		assertTrue(connectionString.contains("ids:BaseConnector"));
-		assertTrue(connectionString.contains("ids:outboundModelVersion"));
+		assertTrue(connectionString.contains("\"@type\" : \"ids:BaseConnector\""));
+		assertTrue(connectionString.contains("ids:resourceCatalog"));
 		assertTrue(connectionString.contains("ids:inboundModelVersion"));
+		assertTrue(connectionString.contains("ids:outboundModelVersion"));
+		assertTrue(connectionString.contains("ids:description"));
 		assertTrue(connectionString.contains("ids:maintainer"));
 		assertTrue(connectionString.contains("ids:curator"));
 		assertTrue(connectionString.contains("ids:title"));
 		assertTrue(connectionString.contains("ids:securityProfile"));
-		assertTrue(connectionString.contains("ids:description"));
-		assertTrue(connectionString.contains("ids:hasEndpoint"));
-		assertTrue(connectionString.contains("ids:hasDefaultEndpoint"));
-		assertTrue(connectionString.contains("ids:title"));
+//		assertTrue(connectionString.contains("ids:hasEndpoint"));
+//		assertTrue(connectionString.contains("ids:hasDefaultEndpoint"));
 	}
 	
 	@Test
@@ -87,8 +88,8 @@ public class SelfDescriptionServiceImplTest {
 		Message availabilityMessage = selfDefinitionService.getConnectorAvailbilityMessage();
 		assertNotNull(availabilityMessage);
 		assertNotNull(availabilityMessage.getSecurityToken());
-//		String ss = geObjectAsString(availabilityMessage);
-//		System.out.println(ss);
+		String ss = geObjectAsString(availabilityMessage);
+		System.out.println(ss);
 	}
 	
 	@Test

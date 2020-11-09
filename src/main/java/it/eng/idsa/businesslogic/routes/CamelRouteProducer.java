@@ -28,6 +28,7 @@ import it.eng.idsa.businesslogic.processor.producer.ProducerUsageControlProcesso
 import it.eng.idsa.businesslogic.processor.producer.ProducerValidateTokenProcessor;
 import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateDeleteMessageProcessor;
 import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreatePassivateMessageProcessor;
+import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateQueryBrokerMessageProcessor;
 import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateRegistrationMessageProcessor;
 import it.eng.idsa.businesslogic.processor.producer.registration.ProducerCreateUpdateMessageProcessor;
 
@@ -98,6 +99,8 @@ public class CamelRouteProducer extends RouteBuilder {
 	private ProducerCreateDeleteMessageProcessor createDeleteMessageProducer;
 	@Autowired
 	private ProducerCreatePassivateMessageProcessor createPassivateMessageProducer;
+	@Autowired
+	private ProducerCreateQueryBrokerMessageProcessor createBrokerQueryMessageProducer;
 
 	@Autowired
 	private ProducerSendRegistrationRequestProcessor sendRegistrationRequestProcessor;
@@ -130,6 +133,9 @@ public class CamelRouteProducer extends RouteBuilder {
 		.to("direct:registrationProcess");
 		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/passivate")
 			.process(createPassivateMessageProducer)
+		.to("direct:registrationProcess");
+		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/query")
+			.process(createBrokerQueryMessageProducer)
 		.to("direct:registrationProcess");
 			
 		from("direct:registrationProcess")

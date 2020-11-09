@@ -1,41 +1,27 @@
 package it.eng.idsa.businesslogic.processor.producer;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import de.fraunhofer.iais.eis.Message;
@@ -75,7 +61,8 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 		
 		Message message = multipartMessageService.getMessage(header);
         MultipartMessage multipartMessage = new MultipartMessageBuilder()
-    			.withHeaderContent(header)
+//    			.withHeaderContent(header)
+        		.withHeaderContent(message)
     			.withPayloadContent(payload)
     			.build();
         String multipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage);
@@ -144,10 +131,11 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 	}
 
 	private CloseableHttpClient getHttpClient() throws IOException {
-//		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
-//
-//		CloseableHttpClient httpClient = HttpClientGenerator.get(config, true);
-//		logger.warn("Created Accept-All Http Client");
+		AcceptAllTruststoreConfig config = new AcceptAllTruststoreConfig();
+
+		CloseableHttpClient httpClient = HttpClientGenerator.get(config, true);
+		logger.warn("Created Accept-All Http Client");
+		/*
 		logger.info("Creating custom http client with broker certificate");
 		InputStream is = null;
 		try {
@@ -176,18 +164,19 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
 			clientbuilder = clientbuilder.setSSLSocketFactory(sslConSocFactory);
 
 			// Building the CloseableHttpClient
-			CloseableHttpClient httpclient = clientbuilder.build();
-			return httpclient;
-		} catch(CertificateException | NoSuchAlgorithmException | KeyStoreException | IOException |
-				KeyManagementException ex) {
-			logger.error("Exception {}", ex);
-		}
-		finally {
-			if (is != null) {
-				is.close();
-			}
-		}
-		return null;
+			CloseableHttpClient httpClient = clientbuilder.build();
+		 */
+			return httpClient;
+//		} catch(CertificateException | NoSuchAlgorithmException | KeyStoreException | IOException |
+//				KeyManagementException ex) {
+//			logger.error("Exception {}", ex);
+//		}
+//		finally {
+//			if (is != null) {
+//				is.close();
+//			}
+//		}
+//		return null;
 	}
 
 	private void handleResponse(Exchange exchange, Message message, CloseableHttpResponse response, String forwardTo, String multipartMessageBody) throws UnsupportedOperationException, IOException {
@@ -218,7 +207,13 @@ public class ProducerSendRegistrationRequestProcessor implements Processor {
                 logger.info("Successful response: " + responseString);
                 // TODO:
                 // Set original body which is created using the original payload and header
-                exchange.getOut().setHeader("multipartMessageBody", multipartMessageBody);
+				exchange.getOut().setHeader("header", multipartMessageService.getHeaderContentString(responseString));
+				String payload = multipartMessageService.getPayloadContent(responseString);
+				if (StringUtils.isEmpty(payload)) {
+					payload = "Empty";
+				}
+				exchange.getOut().setHeader("payload", payload);
+//                exchange.getOut().setHeaders(exchange.getIn().getHeaders());
                 exchange.getOut().setBody(responseString);
             }
         }

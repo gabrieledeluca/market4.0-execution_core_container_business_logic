@@ -78,9 +78,9 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		Map<String, Object> tokenAsMap = (Map<String, Object>) messageAsMapWithToken.get("authorizationToken");
 		messageAsMap.put("IDS-SecurityToken-Type", tokenAsMap.get("@type").toString());
 		messageAsMap.put("IDS-SecurityToken-Id", tokenAsMap.get("@id").toString());
+		messageAsMap.put("IDS-SecurityToken-TokenValue", tokenAsMap.get("tokenValue").toString());
 		Map<String, Object> tokenFormatAsMap = (Map<String, Object>) tokenAsMap.get("tokenFormat");
 		messageAsMap.put("IDS-SecurityToken-TokenFormat", tokenFormatAsMap.get("@id").toString());
-		messageAsMap.put("IDS-SecurityToken-TokenValue", tokenAsMap.get("tokenValue").toString());
 
 	}
 
