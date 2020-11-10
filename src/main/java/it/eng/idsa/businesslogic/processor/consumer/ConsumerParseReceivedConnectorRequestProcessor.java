@@ -70,12 +70,8 @@ public class ConsumerParseReceivedConnectorRequestProcessor implements Processor
 			if (headersParts.get("IDS-SecurityToken-TokenValue") != null) {
 				token = headersParts.get("IDS-SecurityToken-TokenValue").toString();
 			}
-			if (exchange.getIn().getBody() != null) {
 				payload = exchange.getIn().getBody(String.class);
-			} else {
-				logger.error("Payload is null");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
+			 
 			multipartMessage = new MultipartMessageBuilder()
 					.withHeaderContent(header)
 					.withPayloadContent(payload)
@@ -89,20 +85,11 @@ public class ConsumerParseReceivedConnectorRequestProcessor implements Processor
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
 
-			if (!headersParts.containsKey("payload")) {
-				logger.error("Multipart message payload is missing");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
-
 			if (headersParts.get("header") == null) {
 				logger.error("Multipart message header is null");
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
 
-			if (headersParts.get("payload") == null) {
-				logger.error("Multipart message payload is null");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
 
 			try {
 
@@ -118,8 +105,9 @@ public class ConsumerParseReceivedConnectorRequestProcessor implements Processor
 				}
 				
 				message = multipartMessageService.getMessage(header);
-				
-				payload = headersParts.get("payload").toString();
+				if(headersParts.get("payload")!=null) {
+					payload = headersParts.get("payload").toString();
+				}
 				
 				if (isEnabledDapsInteraction) {
 					token = multipartMessageService.getToken(message);

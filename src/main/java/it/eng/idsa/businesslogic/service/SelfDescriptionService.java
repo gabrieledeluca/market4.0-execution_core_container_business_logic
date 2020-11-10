@@ -53,4 +53,13 @@ public interface SelfDescriptionService {
      * @throws DatatypeConfigurationException
      */
     Message getConnectorInactiveMessage() throws ConstraintViolationException, URISyntaxException, DatatypeConfigurationException;
+    
+    /**
+     * 
+     * @return
+     * @throws ConstraintViolationException
+     * @throws URISyntaxException
+     * @throws DatatypeConfigurationException
+     */
+    Message getConnectorQueryMessage() throws ConstraintViolationException, URISyntaxException, DatatypeConfigurationException;
 }

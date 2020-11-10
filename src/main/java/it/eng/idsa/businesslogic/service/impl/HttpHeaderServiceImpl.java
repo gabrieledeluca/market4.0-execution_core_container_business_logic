@@ -85,9 +85,9 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		Map<String, Object> tokenAsMap = (Map<String, Object>) messageAsMapWithToken.get("authorizationToken");
 		messageAsMap.put("IDS-SecurityToken-Type", tokenAsMap.get("@type").toString());
 		messageAsMap.put("IDS-SecurityToken-Id", tokenAsMap.get("@id").toString());
+		messageAsMap.put("IDS-SecurityToken-TokenValue", tokenAsMap.get("tokenValue").toString());
 		Map<String, Object> tokenFormatAsMap = (Map<String, Object>) tokenAsMap.get("tokenFormat");
 		messageAsMap.put("IDS-SecurityToken-TokenFormat", tokenFormatAsMap.get("@id").toString());
-		messageAsMap.put("IDS-SecurityToken-TokenValue", tokenAsMap.get("tokenValue").toString());
 
 	}
 
@@ -259,6 +259,10 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 		}
 		if (messageAsMap.get("ids:requestedArtifact") != null) {
 			headers.put("IDS-RequestedArtifact", messageAsMap.get("ids:requestedArtifact"));
+		}
+		if (messageAsMap.get("ids:rejectionReason") != null) {
+			Map<String, Object> rejectionReason = (Map<String, Object>) messageAsMap.get("ids:rejectionReason");
+			headers.put("IDS-RejectionReason", rejectionReason.get("@id"));
 		}
 		return headers;
 	}

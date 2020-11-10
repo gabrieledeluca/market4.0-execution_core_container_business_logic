@@ -97,20 +97,12 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
 
-			if (!headersParts.containsKey("payload")) {
-				logger.error("Multipart message payload is missing");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
 
 			if (headersParts.get("header") == null) {
 				logger.error("Multipart message header is null");
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
 
-			if (headersParts.get("payload") == null) {
-				logger.error("Multipart message payload is null");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
 
 			try {
 
@@ -124,7 +116,9 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 					DataHandler dtHeader = (DataHandler) headersParts.get("header");
 					header = IOUtils.toString(dtHeader.getInputStream(), StandardCharsets.UTF_8);
 				}
-				payload = headersParts.get("payload").toString();
+				if(headersParts.get("payload")!=null) {
+					payload = headersParts.get("payload").toString();
+				}
 
 				multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload)
 						.build();

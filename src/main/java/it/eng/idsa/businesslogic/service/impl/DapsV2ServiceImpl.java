@@ -2,8 +2,6 @@ package it.eng.idsa.businesslogic.service.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,7 +19,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
@@ -57,20 +54,15 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 
-import de.fhg.aisec.ids.api.settings.Settings;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import it.eng.idsa.businesslogic.service.DapsService;
-import it.eng.idsa.businesslogic.util.ProxyAuthenticator;
-import okhttp3.Authenticator;
-import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import okhttp3.Route;
 
 
 /**
@@ -83,7 +75,6 @@ import okhttp3.Route;
 public class DapsV2ServiceImpl implements DapsService {
     private static final Logger logger = LoggerFactory.getLogger(DapsV2ServiceImpl.class);
 
-    private Settings settings = null;
     private SSLSocketFactory sslSocketFactory = null;
     private String token = "";
     @Value("${application.targetDirectory}")
@@ -96,25 +87,15 @@ public class DapsV2ServiceImpl implements DapsService {
     private String keyStorePassword;
     @Value("${application.keystoreAliasName}")
     private String keystoreAliasName;
-    //@Value("${application.connectorUUID}")
-    //private String connectorUUID;
-    @Value("${application.proxyUser}")
-    private String proxyUser;
-    @Value("${application.proxyPassword}")
-    private String proxyPassword;
-    @Value("${application.proxyHost}")
-    private String proxyHost;
-    @Value("${application.proxyPort}")
-    private String proxyPort;
     @Value("${application.dapsJWKSUrl}")
     private String dapsJWKSUrl;
 
     public String getJwtToken() {
 
-        String dynamicAttributeToken = "INVALID_TOKEN";
+//        String dynamicAttributeToken = "INVALID_TOKEN";
         String targetAudience = "idsc:IDS_CONNECTORS_ALL";
 
-        Map<String, Object> jwtClaims = null;
+//        Map<String, Object> jwtClaims = null;
 
         // Try clause for setup phase (loading keys, building trust manager)
         try {
@@ -159,14 +140,6 @@ public class DapsV2ServiceImpl implements DapsService {
                 throw new RuntimeException(e);
             }
 
-            Authenticator proxyAuthenticator = new Authenticator() {
-                @Override
-                public Request authenticate(Route route, Response response) throws IOException {
-                    String credential = Credentials.basic(proxyUser, proxyPassword);
-                    return response.request().newBuilder().header("Proxy-Authorization", credential).build();
-                }
-            };
-
             OkHttpClient client = null;
             final TrustManager[] trustAllCerts = new TrustManager[]{
                     new X509TrustManager() {
@@ -190,32 +163,16 @@ public class DapsV2ServiceImpl implements DapsService {
             final SSLContext sslContext = SSLContext.getInstance("SSL");
             sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
             // Create an ssl socket factory with our all-trusting manager
-            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-            if (!proxyUser.equalsIgnoreCase("")) {
-                client = new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS)
-                        .writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
-                        .proxy(new Proxy(Proxy.Type.HTTP,
-                                new InetSocketAddress(proxyHost, Integer.parseInt(proxyPort))))
-                        .proxyAuthenticator(proxyAuthenticator)
-                        .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
-                        .hostnameVerifier(new HostnameVerifier() {
-                            @Override
-                            public boolean verify(String hostname, SSLSession session) {
-                                // TODO Auto-generated method stub
-                                return true;
-                            }
-                        }).build();
-            } else {
-                client = new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS)
-                        .writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
-                        .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
-                        .hostnameVerifier(new HostnameVerifier() {
-                            @Override
-                            public boolean verify(String hostname, SSLSession session) {
-                                return true;
-                            }
-                        }).build();
-            }
+//            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+            client = new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
+                    .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
+                    .hostnameVerifier(new HostnameVerifier() {
+                        @Override
+                        public boolean verify(String hostname, SSLSession session) {
+                            return true;
+                        }
+                    }).build();
 
             // Get AKI
             //GET 2.5.29.14	SubjectKeyIdentifier / 2.5.29.35	AuthorityKeyIdentifier
@@ -269,7 +226,7 @@ public class DapsV2ServiceImpl implements DapsService {
                             .add("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
                             .build();
 
-            OkHttpClient.Builder builder = new OkHttpClient.Builder();
+//            OkHttpClient.Builder builder = new OkHttpClient.Builder();
 
 //            // configure client with trust manager
 //            OkHttpClient client =
@@ -475,16 +432,7 @@ public class DapsV2ServiceImpl implements DapsService {
 
             // Load JWK set from URL
             JWKSet publicKeys = null;
-            if (!proxyUser.equalsIgnoreCase("")) {
-                System.setProperty("jdk.http.auth.tunneling.disabledSchemes", "");
-                System.setProperty("jdk.http.auth.proxying.disabledSchemes", "");
-                ProxyAuthenticator proxyAuthenticator = new ProxyAuthenticator(proxyUser, proxyPassword);
-                java.net.Authenticator.setDefault(proxyAuthenticator);
-                Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, Integer.parseInt(proxyPort)));
-                publicKeys = JWKSet.load(new URL(dapsJWKSUrl), 0, 0, 0, proxy);
-            } else {
                 publicKeys = JWKSet.load(new URL(dapsJWKSUrl));
-            }
             RSAKey key = (RSAKey) publicKeys.getKeyByKeyId("default");
 
             // The expected JWS algorithm of the access tokens (agreed out-of-band)
