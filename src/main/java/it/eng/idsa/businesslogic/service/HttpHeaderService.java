@@ -3,6 +3,8 @@ package it.eng.idsa.businesslogic.service;
 import java.io.IOException;
 import java.util.Map;
 
+import org.json.simple.parser.ParseException;
+
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -30,4 +32,7 @@ public interface HttpHeaderService {
 	Map<String, Object> getHeaderContentHeaders(Map<String, Object> headersParts);
 	
 	Map<String, String> convertMapToStringString(Map<String, Object> map);
+	
+	Map<String, Object> transformJWTTokenToHeaders(String token)
+			throws JsonMappingException, JsonProcessingException, ParseException;
 }

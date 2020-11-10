@@ -15,6 +15,7 @@ import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -117,7 +118,7 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 
 	@Override
 	public CloseableHttpResponse sendMessageHttpHeader(String address, MultipartMessage multipartMessage,
-			Map<String, Object> headerParts, boolean eccCommunication) throws IOException {
+			Map<String, Object> headerParts, boolean eccCommunication) throws IOException, ParseException {
 		logger.info("Forwarding Message: http-header");
 
 		if(!openDataAppReceiverRouter.equals("http-header")) {
@@ -126,7 +127,7 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 		}
 		
 		if (eccCommunication && isEnabledDapsInteraction) {
-			headerParts.put("IDS-SecurityToken-TokenValue", multipartMessage.getToken());
+			headerParts.putAll(headerService.transformJWTTokenToHeaders(multipartMessage.getToken()));
 		}
 		// Set F address
 		HttpPost httpPost = new HttpPost(address);

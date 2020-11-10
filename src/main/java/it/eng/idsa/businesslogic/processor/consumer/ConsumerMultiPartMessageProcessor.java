@@ -70,21 +70,12 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		Message message = null;
 		MultipartMessage multipartMessage = null;
-		Map<String, Object> headerContentHeaders = null;
 
 		headersParts.put("Is-Enabled-Daps-Interaction", isEnabledDapsInteraction);
 		headersParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 		headersParts.put("Is-Enabled-DataApp-WebSocket", isEnabledDataAppWebSocket);
 		
 		if (dataAppSendRouter.equals("http-header")) { 
-			try {
-				// header content headers will be set in he http-headers of the MultipartMessage
-				headerContentHeaders = headerService.getHeaderContentHeaders(headersParts);
-			} catch (Exception e) {
-				logger.error("Mandatory headers of the multipart message header part are missing or null:", e);
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
-
 			if (exchange.getIn().getBody() != null) {
 				payload = exchange.getIn().getBody(String.class);
 			} else {
@@ -95,8 +86,6 @@ public class ConsumerMultiPartMessageProcessor implements Processor {
 			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
 			message = multipartMessageService.getMessage(header);
 			multipartMessage = new MultipartMessageBuilder()
-					.withHttpHeader(headerService.convertMapToStringString(headerContentHeaders))
-					.withHeaderContent(message)
 					.withHeaderContent(header)
 					.withPayloadContent(payload).build();
 			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));

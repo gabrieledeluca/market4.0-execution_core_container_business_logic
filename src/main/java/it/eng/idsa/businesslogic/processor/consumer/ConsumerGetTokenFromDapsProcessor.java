@@ -46,16 +46,8 @@ public class ConsumerGetTokenFromDapsProcessor implements Processor {
 
 		Map<String, Object> headersParts = exchange.getIn().getHeaders();
 		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
-		Message message = null;
-
-		// Get message id
-		if (eccHttpSendRouter.equals("http-header")) {
-			logger.info("message id=" + multipartMessage.getHttpHeaders().get("IDS-Id"));
-		} else {
-			message = multipartMessage.getHeaderContent();
-			logger.info("message id=" + message.getId());
-
-		}
+		Message message = multipartMessage.getHeaderContent();
+		logger.info("message id=" + message.getId());
 
 		// Get the Token from the DAPS
 		String token = null;
@@ -80,46 +72,24 @@ public class ConsumerGetTokenFromDapsProcessor implements Processor {
 
 		logger.info("token=" + token);
 		if (eccHttpSendRouter.equals("http-header")) {
-			multipartMessage = new MultipartMessageBuilder()
-					.withHttpHeader(multipartMessage.getHttpHeaders())
+			multipartMessage = new MultipartMessageBuilder().withHttpHeader(multipartMessage.getHttpHeaders())
 					.withHeaderHeader(multipartMessage.getHeaderHeader())
-                    .withHeaderContent(multipartMessage.getHeaderContent())
+					.withHeaderContent(multipartMessage.getHeaderContent())
 					.withPayloadHeader(multipartMessage.getPayloadHeader())
-					.withPayloadContent(multipartMessage.getPayloadContent())
-					.withToken(token).build();
+					.withPayloadContent(multipartMessage.getPayloadContent()).withToken(token).build();
 		} else {
 			String messageStringWithToken = multipartMessageService.addToken(message, token);
 			logger.info("messageStringWithToken=" + messageStringWithToken);
-			
 
-			multipartMessage = new MultipartMessageBuilder()
-					.withHttpHeader(multipartMessage.getHttpHeaders())
-					.withHeaderHeader(multipartMessage.getHeaderHeader())
-					.withHeaderContent(messageStringWithToken)
+			multipartMessage = new MultipartMessageBuilder().withHttpHeader(multipartMessage.getHttpHeaders())
+					.withHeaderHeader(multipartMessage.getHeaderHeader()).withHeaderContent(messageStringWithToken)
 					.withPayloadHeader(multipartMessage.getPayloadHeader())
-					.withPayloadContent(multipartMessage.getPayloadContent())
-					.withToken(token).build();
+					.withPayloadContent(multipartMessage.getPayloadContent()).withToken(token).build();
 
-//			multipartMessageParts.put("header", messageStringWithToken);
-//			exchange.getOut().setBody(multipartMessageParts);
 		}
 
 		// Return exchange
 		exchange.getOut().setBody(multipartMessage);
 		exchange.getOut().setHeaders(headersParts);
 	}
-/*
-	private void transformJWTTokenToHeaders(String token, Map<String, String> httpHeaders)
-			throws JsonMappingException, JsonProcessingException, ParseException {
-		Token tokenJsonValue = new TokenBuilder()._tokenFormat_(TokenFormat.JWT)._tokenValue_(token).build();
-		String tokenValueSerialized = new Serializer().serializePlainJson(tokenJsonValue);
-		JSONParser parser = new JSONParser();
-		JSONObject jsonObjectToken = (JSONObject) parser.parse(tokenValueSerialized);
-
-		httpHeaders.put("IDS-SecurityToken-Type", jsonObjectToken.get("@type").toString());
-		httpHeaders.put("IDS-SecurityToken-Id", tokenJsonValue.getId().toString());
-		httpHeaders.put("IDS-SecurityToken-TokenFormat", tokenJsonValue.getTokenFormat().toString());
-		httpHeaders.put("IDS-SecurityToken-TokenValue", token);
-	}
-*/
 }

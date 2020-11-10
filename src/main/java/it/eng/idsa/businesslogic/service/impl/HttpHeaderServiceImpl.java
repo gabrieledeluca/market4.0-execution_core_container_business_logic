@@ -5,7 +5,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.json.simple.JSONObject;
 import org.json.simple.JsonObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +18,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import de.fraunhofer.iais.eis.Token;
+import de.fraunhofer.iais.eis.TokenBuilder;
+import de.fraunhofer.iais.eis.TokenFormat;
+import de.fraunhofer.iais.eis.ids.jsonld.Serializer;
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.multipart.domain.MultipartMessage;
 
@@ -144,8 +151,9 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 	public Map<String, Object> prepareMessageForSendingAsHttpHeadersWithoutToken(String header) throws IOException {
 		ObjectMapper oMapper = new ObjectMapper();
 		Map<String, Object> messageAsMap = null;
-		messageAsMap = oMapper.readValue(header, new TypeReference<Map<String, Object>>() { });
-		
+		messageAsMap = oMapper.readValue(header, new TypeReference<Map<String, Object>>() {
+		});
+
 		Map<String, Object> headers = new HashMap<>();
 
 		if (messageAsMap.get("@type") != null) {
@@ -218,11 +226,13 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 	}
 
 	@Override
-	public Map<String, Object> prepareMessageForSendingAsHttpHeaders(MultipartMessage multipartMessage) throws IOException {
+	public Map<String, Object> prepareMessageForSendingAsHttpHeaders(MultipartMessage multipartMessage)
+			throws IOException {
 		ObjectMapper oMapper = new ObjectMapper();
 		Map<String, Object> messageAsMap = null;
-			messageAsMap = oMapper.readValue(multipartMessage.getHeaderContentString(),
-					new TypeReference<Map<String, Object>>() { });
+		messageAsMap = oMapper.readValue(multipartMessage.getHeaderContentString(),
+				new TypeReference<Map<String, Object>>() {
+				});
 
 		Map<String, Object> headers = new HashMap<>();
 
@@ -257,6 +267,22 @@ public class HttpHeaderServiceImpl implements HttpHeaderService {
 	public Map<String, String> convertMapToStringString(Map<String, Object> map) {
 		return map.entrySet().stream().filter(entry -> entry.getValue() instanceof String)
 				.collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
+	}
+
+	@Override
+	public Map<String, Object> transformJWTTokenToHeaders(String token)
+			throws JsonMappingException, JsonProcessingException, ParseException {
+		Map<String, Object> tokenAsMap = new HashMap<>();
+		Token tokenJsonValue = new TokenBuilder()._tokenFormat_(TokenFormat.JWT)._tokenValue_(token).build();
+		String tokenValueSerialized = new Serializer().serializePlainJson(tokenJsonValue);
+		JSONParser parser = new JSONParser();
+		JSONObject jsonObjectToken = (JSONObject) parser.parse(tokenValueSerialized);
+
+		tokenAsMap.put("IDS-SecurityToken-Type", jsonObjectToken.get("@type").toString());
+		tokenAsMap.put("IDS-SecurityToken-Id", tokenJsonValue.getId().toString());
+		tokenAsMap.put("IDS-SecurityToken-TokenFormat", tokenJsonValue.getTokenFormat().toString());
+		tokenAsMap.put("IDS-SecurityToken-TokenValue", token);
+		return tokenAsMap;
 	}
 
 }

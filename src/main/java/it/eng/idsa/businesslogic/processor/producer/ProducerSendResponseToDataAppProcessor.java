@@ -71,16 +71,11 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 		// application.isEnabledClearingHouse
 		headerParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 		
-		if (isEnabledDapsInteraction) {
-			//remove token before sending the response
-			multipartMessage = multipartMessageService.removeTokenFromMultipart(multipartMessage);
-		}
 		if(!isEnabledUsageControl) {
 			// UsageControl enabled, still some processing needs to be done
 			switch (openDataAppReceiverRouter) {
 			case "form":
-				httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
-            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
+	        	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
 				HttpEntity resultEntity = multipartMessageService.createMultipartMessage(multipartMessage.getHeaderContentString(), 
 						multipartMessage.getPayloadContent(),
 						null, ContentType.APPLICATION_JSON);
@@ -88,8 +83,7 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 				exchange.getOut().setBody(resultEntity.getContent());
 				break;
 			case "mixed":
-				httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
-            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
+	        	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
 				responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
 				Optional<String> boundary = getMessageBoundaryFromMessage(responseString);
 				contentType = "multipart/mixed; boundary=" + boundary.orElse("---aaa") + ";charset=UTF-8";

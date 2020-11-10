@@ -145,7 +145,6 @@ public class ProducerUsageControlProcessor implements Processor {
             if(openDataAppReceiverRouter.equals("http-header")) {
             	exchange.getOut().setBody(extractPayloadFromJson(ucObj.getPayload()));
             } else {
-            	httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
             	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
             	if(openDataAppReceiverRouter.equals("form")) {
             		HttpEntity resultEntity = multipartMessageService.createMultipartMessage(header, extractPayloadFromJson(ucObj.getPayload()),

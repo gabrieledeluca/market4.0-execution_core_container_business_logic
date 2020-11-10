@@ -76,7 +76,6 @@ public class ConsumerSendDataToDataAppProcessor implements Processor {
 		MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 		
 		if (!openDataAppReceiverRouter.equals("http-header")) {
-			httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
         	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
 		}
 

@@ -75,7 +75,7 @@ public class ConsumerSendDataToBusinessLogicProcessor implements Processor {
 				headersParts.putAll(headerService.prepareMessageForSendingAsHttpHeaders(multipartMessage));
 			}
 			if (isEnabledDapsInteraction) {
-				headersParts.put("IDS-SecurityToken-TokenValue", multipartMessage.getToken());
+				headersParts.putAll(headerService.transformJWTTokenToHeaders(multipartMessage.getToken()));
 			}
 		} else {
 			if(isEnabledDapsInteraction) {

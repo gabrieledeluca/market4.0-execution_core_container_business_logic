@@ -85,7 +85,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
 			JSONObject jsonObjectToken = (JSONObject) parser.parse(tokenValueSerialized);
-			jsonObject.put("ids:authorizationToken", jsonObjectToken);
+			jsonObject.put("ids:securityToken ", jsonObjectToken);
 			output = serializeMessage(jsonObject);
 		} catch (ParseException | IOException e) {
 			logger.error(e);
@@ -100,7 +100,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			String msgSerialized = serializeMessage(message);
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
-			jsonObject.remove("ids:authorizationToken");
+			jsonObject.remove("ids:securityToken ");
 			output = serializeMessage(jsonObject);
 		} catch (ParseException | IOException e) {
 			logger.error(e);
@@ -173,7 +173,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			String msgSerialized = serializeMessage(message);
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
-			jsonObject = (JSONObject) jsonObject.get("ids:authorizationToken");
+			jsonObject = (JSONObject) jsonObject.get("ids:securityToken ");
 			if (jsonObject == null) {
 				logger.error(
 						"Token is not set: authorizationToken is not set in the part of the header in the multipart message");
