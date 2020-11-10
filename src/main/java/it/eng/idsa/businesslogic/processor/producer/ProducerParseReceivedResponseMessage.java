@@ -39,13 +39,13 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 
 	@Autowired
 	private HttpHeaderService headerService;
-	
+
 	@Autowired
 	private MultipartMessageService multipartMessageService;
 
 	@Value("${application.eccHttpSendRouter}")
 	private String eccHttpSendRouter;
-	
+
 	@Value("${application.isEnabledDapsInteraction}")
 	private boolean isEnabledDapsInteraction;
 
@@ -60,24 +60,18 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 		String token = null;
 
 		if (eccHttpSendRouter.equals("http-header")) {
-			if (exchange.getIn().getBody() != null) {
-				payload = exchange.getIn().getBody(String.class);
-			} else {
-				logger.error("Payload is null");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
+			payload = exchange.getIn().getBody(String.class);
 			header = headerService.getHeaderMessagePartFromHttpHeadersWithoutToken(headersParts);
 			headersParts.put("Payload-Content-Type", headersParts.get(MultipartMessageKey.CONTENT_TYPE.label));
-			
-			if(headersParts.get("IDS-SecurityToken-TokenValue") != null) {
+
+			if (headersParts.get("IDS-SecurityToken-TokenValue") != null) {
 				token = headersParts.get("IDS-SecurityToken-TokenValue").toString();
 				headersParts.remove("IDS-SecurityToken-TokenValue");
 			}
 			multipartMessage = new MultipartMessageBuilder()
 					.withHeaderContent(header)
 					.withPayloadContent(payload)
-					.withToken(token)
-					.build();
+					.withToken(token).build();
 
 		} else {
 			if (!headersParts.containsKey("header")) {
@@ -85,18 +79,9 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
 
-			if (!headersParts.containsKey("payload")) {
-				logger.error("Multipart message payload is missing");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
 
 			if (headersParts.get("header") == null) {
 				logger.error("Multipart message header is null");
-				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
-			}
-
-			if (headersParts.get("payload") == null) {
-				logger.error("Multipart message payload is null");
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);
 			}
 
@@ -113,15 +98,15 @@ public class ProducerParseReceivedResponseMessage implements Processor {
 					header = IOUtils.toString(dtHeader.getInputStream(), StandardCharsets.UTF_8);
 				}
 				message = multipartMessageService.getMessage(header);
+				if(headersParts.get("payload")!=null) {
+					payload = headersParts.get("payload").toString();
+				}
 				
-				payload = headersParts.get("payload").toString();
 				if (isEnabledDapsInteraction) {
 					token = multipartMessageService.getToken(message);
 				}
-					multipartMessage = new MultipartMessageBuilder().withHeaderContent(header)
-							.withPayloadContent(payload)
-							.withToken(token)
-							.build();
+				multipartMessage = new MultipartMessageBuilder().withHeaderContent(header).withPayloadContent(payload)
+						.withToken(token).build();
 			} catch (Exception e) {
 				logger.error("Error parsing multipart message:", e);
 				rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_COMMON, message);

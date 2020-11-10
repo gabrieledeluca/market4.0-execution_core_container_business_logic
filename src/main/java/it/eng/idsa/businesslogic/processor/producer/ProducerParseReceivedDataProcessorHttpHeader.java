@@ -47,10 +47,6 @@ public class ProducerParseReceivedDataProcessorHttpHeader implements Processor{
 		// Get from the input "exchange"
 		headersParts = exchange.getIn().getHeaders();
 		payload = exchange.getIn().getBody(String.class);
-		if (payload == null) {
-			logger.error("Body of the received multipart message is null");
-			rejectionMessageService.sendRejectionMessage(RejectionMessageType.REJECTION_MESSAGE_LOCAL_ISSUES, message);
-		}
 		
 		try {
 			// Put in the header value of the application.property: application.isEnabledDapsInteraction
