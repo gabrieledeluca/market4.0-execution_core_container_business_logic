@@ -21,8 +21,6 @@ import de.fraunhofer.iais.eis.DynamicAttributeToken;
 import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder;
 import de.fraunhofer.iais.eis.Message;
 import de.fraunhofer.iais.eis.MessageProcessedNotificationMessageBuilder;
-import de.fraunhofer.iais.eis.Token;
-import de.fraunhofer.iais.eis.TokenBuilder;
 import de.fraunhofer.iais.eis.TokenFormat;
 import de.fraunhofer.iais.eis.util.ConstraintViolationException;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
@@ -107,15 +105,15 @@ public class MultipartMessageServiceImplTest {
 				._tokenFormat_(TokenFormat.JWT)
 				._tokenValue_("DummyTokenAsNoDapsIsAvailable")
 				.build();
-		Token authorizationToken = new TokenBuilder(new URI("http://authorizationToken.com"))
-				._tokenFormat_(TokenFormat.JWT)
-				._tokenValue_("some_dummy_jwt_string_used_for_testing")
-				.build();
+//		Token authorizationToken = new TokenBuilder(new URI("http://authorizationToken.com"))
+//				._tokenFormat_(TokenFormat.JWT)
+//				._tokenValue_("some_dummy_jwt_string_used_for_testing")
+//				.build();
 		Message message = new MessageProcessedNotificationMessageBuilder(new URI("https://w3id.org/idsa/autogen/messageProcessedNotificationMessage/1f1050d4-6133-41a5-85dc-cc5edf97f614"))
 				._correlationMessage_(new URI("https://w3id.org/idsa/autogen/connectorAvailableMessage/67b2d428-f7d7-489f-972e-601a12203621"))
 				._issuerConnector_(new URI("https://ids0.datahub.c.fraunhofer.de/"))
 				._securityToken_(securityToken)
-				._authorizationToken_(authorizationToken)
+//				._authorizationToken_(authorizationToken)
 				._modelVersion_("4.0.0")
 				._issued_(DatatypeFactory.newInstance().newXMLGregorianCalendar(new GregorianCalendar()))
 				._senderAgent_(new URI("https://www.iais.fraunhofer.de"))
@@ -123,7 +121,7 @@ public class MultipartMessageServiceImplTest {
 		
 		String result = service.removeToken(message);
 		assertNotNull(result);
-		assertFalse(result.contains("authorizationToken"));
+		assertFalse(result.contains("securityToken"));
 	}
 	
 }

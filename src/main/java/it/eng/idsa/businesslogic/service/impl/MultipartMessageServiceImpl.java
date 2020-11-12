@@ -100,7 +100,7 @@ public class MultipartMessageServiceImpl implements MultipartMessageService {
 			String msgSerialized = serializeMessage(message);
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObject = (JSONObject) parser.parse(msgSerialized);
-			jsonObject.remove("ids:securityToken ");
+			jsonObject.remove("ids:securityToken");
 			output = serializeMessage(jsonObject);
 		} catch (ParseException | IOException e) {
 			logger.error(e);
