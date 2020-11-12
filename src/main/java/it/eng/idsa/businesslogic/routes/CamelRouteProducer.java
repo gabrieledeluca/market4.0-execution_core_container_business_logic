@@ -121,31 +121,32 @@ public class CamelRouteProducer extends RouteBuilder {
 		onException(ExceptionForProcessor.class, RuntimeException.class)
 			.handled(true)
 			.process(processorException);
-		
-		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/register")
-			.process(createRegistratioMessageProducer)
+		if(!isEnabledDataAppWebSocket) {
+			from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/register")
+				.process(createRegistratioMessageProducer)
+				.to("direct:registrationProcess");
+			from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/update")
+				.process(createUpdateMessageProducer)
 			.to("direct:registrationProcess");
-		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/update")
-			.process(createUpdateMessageProducer)
-		.to("direct:registrationProcess");
-		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/delete")
-			.process(createDeleteMessageProducer)
-		.to("direct:registrationProcess");
-		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/passivate")
-			.process(createPassivateMessageProducer)
-		.to("direct:registrationProcess");
-		from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/query")
-			.process(createBrokerQueryMessageProducer)
-		.to("direct:registrationProcess");
-			
-		from("direct:registrationProcess")
-            .process(sendRegistrationRequestProcessor)
-            //TODO following processor is workaround 
-            // to remove Content-Type from response in order to be able to Serialize it correct
-			.process(processRegistrationResponseProducer)
-			.process(parseReceivedResponseMessage)
-			.process(sendResponseToDataAppProcessor);
-
+			from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/delete")
+				.process(createDeleteMessageProducer)
+			.to("direct:registrationProcess");
+			from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/passivate")
+				.process(createPassivateMessageProducer)
+			.to("direct:registrationProcess");
+			from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/selfRegistration/query")
+				.process(createBrokerQueryMessageProducer)
+			.to("direct:registrationProcess");
+				
+			from("direct:registrationProcess")
+	            .process(sendRegistrationRequestProcessor)
+	            //TODO following processor is workaround 
+	            // to remove Content-Type from response in order to be able to Serialize it correct
+				.process(processRegistrationResponseProducer)
+				.process(parseReceivedResponseMessage)
+				.process(sendResponseToDataAppProcessor);
+		}
+		
 		if(!isEnabledDataAppWebSocket) {
             // Camel SSL - Endpoint: A - Body binary
             from("jetty://https4://0.0.0.0:" + configuration.getCamelProducerPort() + "/incoming-data-app/multipartMessageBodyBinary")

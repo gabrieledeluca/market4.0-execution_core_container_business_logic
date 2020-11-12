@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import it.eng.idsa.businesslogic.configuration.WebSocketServerConfigurationA;
+import it.eng.idsa.businesslogic.processor.consumer.websocket.server.ResponseMessageBufferBean;
 import it.eng.idsa.businesslogic.service.HttpHeaderService;
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.util.HeaderCleaner;
@@ -71,11 +72,16 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 		// application.isEnabledClearingHouse
 		headerParts.put("Is-Enabled-Clearing-House", isEnabledClearingHouse);
 		
+		if (isEnabledDapsInteraction) {
+			//remove token before sending the response
+			multipartMessage = multipartMessageService.removeTokenFromMultipart(multipartMessage);
+		}
 		if(!isEnabledUsageControl) {
 			// UsageControl enabled, still some processing needs to be done
 			switch (openDataAppReceiverRouter) {
 			case "form":
-	        	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
+				httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
+            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
 				HttpEntity resultEntity = multipartMessageService.createMultipartMessage(multipartMessage.getHeaderContentString(), 
 						multipartMessage.getPayloadContent(),
 						null, ContentType.APPLICATION_JSON);
@@ -83,7 +89,8 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 				exchange.getOut().setBody(resultEntity.getContent());
 				break;
 			case "mixed":
-	        	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
+				httpHeaderService.removeTokenHeaders(exchange.getIn().getHeaders());
+            	httpHeaderService.removeMessageHeadersWithoutToken(exchange.getIn().getHeaders());
 				responseString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
 				Optional<String> boundary = getMessageBoundaryFromMessage(responseString);
 				contentType = "multipart/mixed; boundary=" + boundary.orElse("---aaa") + ";charset=UTF-8";
@@ -109,6 +116,13 @@ public class ProducerSendResponseToDataAppProcessor implements Processor {
 			headerParts.remove("multipartMessageBody");
 			headerParts.remove("Is-Enabled-Clearing-House");
 		}
+		
+		// TODO: Send The MultipartMessage message to the WebSocket
+			if(isEnabledWebSocket) {
+				String responseMultipartMessageString = MultipartMessageProcessor.multipartMessagetoString(multipartMessage, false);
+				ResponseMessageBufferBean responseMessageServerBean = webSocketServerConfiguration.responseMessageBufferWebSocket();
+				responseMessageServerBean.add(responseMultipartMessageString.getBytes());
+			}
 	}
 	
 	private Optional<String> getMessageBoundaryFromMessage(String message) {
