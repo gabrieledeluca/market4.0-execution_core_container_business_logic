@@ -119,7 +119,7 @@ public class ProducerSendDataToBusinessLogicProcessor implements Processor {
 			// Handle response
 			this.handleResponseWebSocket(exchange, message, response, forwardTo, multipartMessageString);
 		} else if (isEnabledWebSocket) {
-			// check & exstract HTTPS WebSocket IP and Port
+			// check & extract HTTPS WebSocket IP and Port
 			try {
 				this.extractWebSocketIPAndPort(forwardTo, REGEX_WSS);
 			} catch (Exception e) {
