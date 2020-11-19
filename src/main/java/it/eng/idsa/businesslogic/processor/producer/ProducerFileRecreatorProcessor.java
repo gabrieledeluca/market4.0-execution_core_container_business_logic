@@ -6,6 +6,8 @@ import it.eng.idsa.businesslogic.processor.consumer.websocket.server.FileRecreat
 import it.eng.idsa.businesslogic.service.MultipartMessageService;
 import it.eng.idsa.businesslogic.service.RejectionMessageService;
 import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.domain.MultipartMessage;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.logging.log4j.LogManager;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 
@@ -48,6 +51,7 @@ public class ProducerFileRecreatorProcessor implements Processor {
 		String payload;
 		Message message=null;
 		Map<String, Object> multipartMessageParts = new HashMap<String, Object>();
+		MultipartMessage multipartMessage = null;
 
 		//  Receive and recreate Multipart message
 		FileRecreatorBeanServer fileRecreatorBean = webSocketServerConfiguration.fileRecreatorBeanWebSocket();
@@ -64,6 +68,10 @@ public class ProducerFileRecreatorProcessor implements Processor {
 			if(payload!=null) {
 				multipartMessageParts.put("payload", payload);
 			}
+			Message msg = multipartMessageService.getMessage(header);
+			multipartMessage = new MultipartMessage(
+					null,
+					null, msg, null, payload, null, null,null);
 		} catch (Exception e) {
 			logger.error("Error parsing multipart message:" + e);
 			// TODO: Send WebSocket rejection message
@@ -71,6 +79,7 @@ public class ProducerFileRecreatorProcessor implements Processor {
 		}
 		// Return exchange
 		exchange.getOut().setHeaders(multipartMessageParts);
+		exchange.getOut().setBody(multipartMessage);
 	}
 
 	private void initializeServer(Message message, FileRecreatorBeanServer fileRecreatorBean) {

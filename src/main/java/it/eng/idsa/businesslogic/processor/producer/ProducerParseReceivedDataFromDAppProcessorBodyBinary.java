@@ -74,7 +74,7 @@ public class ProducerParseReceivedDataFromDAppProcessorBodyBinary implements Pro
 			
 			// Return exchange
 			exchange.getOut().setHeaders(headesParts);
-			exchange.getOut().setBody(multipartMessageParts);
+			exchange.getOut().setBody(exchange.getIn().getBody());
 
 		} catch (Exception e) {
 			logger.error("Error parsing multipart message:", e);

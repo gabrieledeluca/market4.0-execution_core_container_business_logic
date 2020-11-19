@@ -1,9 +1,14 @@
 package it.eng.idsa.businesslogic.processor.consumer;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import de.fraunhofer.iais.eis.Message;
+import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
+import it.eng.idsa.businesslogic.processor.producer.websocket.client.MessageWebSocketOverHttpSender;
+import it.eng.idsa.businesslogic.service.MultipartMessageService;
+import it.eng.idsa.businesslogic.service.RejectionMessageService;
+import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import it.eng.idsa.multipart.domain.MultipartMessage;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -13,12 +18,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import de.fraunhofer.iais.eis.Message;
-import it.eng.idsa.businesslogic.configuration.ApplicationConfiguration;
-import it.eng.idsa.businesslogic.processor.producer.websocket.client.MessageWebSocketOverHttpSender;
-import it.eng.idsa.businesslogic.service.MultipartMessageService;
-import it.eng.idsa.businesslogic.service.RejectionMessageService;
-import it.eng.idsa.businesslogic.util.RejectionMessageType;
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Antonio Scatoloni
@@ -51,17 +54,17 @@ public class ConsumerWebSocketSendDataToDataAppProcessor implements Processor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-
-        Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
+    	// Not HashMap but MultipartMessage
+//        Map<String, Object> multipartMessageParts = exchange.getIn().getBody(HashMap.class);
+        MultipartMessage multipartMessage = exchange.getIn().getBody(MultipartMessage.class);
 
         // Get header, payload and message
-        String header = multipartMessageParts.get("header").toString();
+        String header = filterHeader(multipartMessage.getHeaderContentString());
         String payload = null;
         this.originalHeader = header;
-        if (multipartMessageParts.containsKey("payload")) {
-            payload = multipartMessageParts.get("payload").toString();
-        }
-        Message message = multipartMessageService.getMessage(multipartMessageParts.get("header"));
+        payload = multipartMessage.getPayloadContent();
+//        if (multipartMessageParts.containsKey("payload")) {
+        Message message = multipartMessage.getHeaderContent();
         URL openDataAppReceiverRouterUrl = new URL(openDataAppReceiver);
         String response = messageWebSocketOverHttpSender
                 .sendMultipartMessageWebSocketOverHttps(openDataAppReceiverRouterUrl.getHost(), openDataAppReceiverRouterUrl.getPort(),
@@ -72,6 +75,10 @@ public class ConsumerWebSocketSendDataToDataAppProcessor implements Processor {
     }
 
 
+    private String filterHeader(String header) throws JsonMappingException, JsonProcessingException {
+        Message message = multipartMessageService.getMessage(header);
+        return multipartMessageService.removeToken(message);
+    }
 
     private void handleResponse(Exchange exchange, Message message, String response, String openApiDataAppAddress) throws UnsupportedOperationException, IOException {
         if (response == null) {

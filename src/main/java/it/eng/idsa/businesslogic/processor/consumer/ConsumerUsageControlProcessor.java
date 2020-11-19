@@ -104,7 +104,7 @@ public class ConsumerUsageControlProcessor implements Processor {
             }
             if (isUsageControlObject) {
                 String payloadToEnforce = createUsageControlObject(artifactRequestMessage.getRequestedArtifact(),
-                        multipartMessage.getPayloadContent().toString());
+                        multipartMessage.getPayloadContent());
                 logger.info("from: " + exchange.getFromEndpoint());
                 logger.info("Message Body: " + payloadToEnforce);
                 logger.info("Message Body Out: " + exchange.getOut().getBody(String.class));
