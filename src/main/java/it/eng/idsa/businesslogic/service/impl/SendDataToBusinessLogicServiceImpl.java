@@ -76,10 +76,9 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 			header = multipartMessage.getHeaderContentString();
 		}
 		ContentType ctPayload;
-		String contentTypeRemoval = "Content-Type: ";
 		if (headerParts.get("Payload-Content-Type") != null) {
 			ctPayload = ContentType
-					.parse(headerParts.get("Payload-Content-Type").toString().replaceFirst(contentTypeRemoval, ""));
+					.parse(headerParts.get("Payload-Content-Type").toString());
 		} else {
 			ctPayload = ContentType.TEXT_PLAIN;
 		}
@@ -134,11 +133,9 @@ public class SendDataToBusinessLogicServiceImpl implements SendDataToBusinessLog
 
 		ContentType ctPayload;
 
-		String contentTypeRemoval = "Content-Type: ";
-
 		if (headerParts.get("Payload-Content-Type") != null) {
 			ctPayload = ContentType
-					.parse(headerParts.get("Payload-Content-Type").toString().replaceFirst(contentTypeRemoval, ""));
+					.parse(headerParts.get("Payload-Content-Type").toString());
 		} else {
 			ctPayload = ContentType.TEXT_PLAIN;
 		}

@@ -86,8 +86,8 @@ public class ProducerParseReceivedDataProcessorBodyBinary implements Processor {
 	 */
 	private boolean checkHeaderContentType(String contentType) {
 		if (contentType != null && (contentType
-				.equals(MultipartMessageKey.CONTENT_TYPE.label + ": " + ContentType.APPLICATION_JSON)
-				|| contentType.equals(MultipartMessageKey.CONTENT_TYPE.label + ": " + ContentType.create("application/json")))) {
+				.equals(""+ContentType.APPLICATION_JSON)
+				|| contentType.equals("" + ContentType.create("application/json"))|| contentType.equals(""+ ContentType.create("application/json+Id")))) {
 			return true;
 		}
 		return false;
